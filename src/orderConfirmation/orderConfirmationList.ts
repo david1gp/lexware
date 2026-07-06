@@ -1,10 +1,10 @@
-import { createResultError, type PromiseResult } from "#result"
 import * as a from "valibot"
+import { createResultError, type PromiseResult } from "#result"
 import type { LexwareClient } from "../shared/LexwareClient.js"
 import { lexwareErrorData } from "../shared/lexwareErrorData.js"
 import { lexwareRequest } from "../shared/lexwareRequest.js"
-import { lexwareUnknownResponseSchema, type LexwareUnknownResponse } from "../shared/lexwareSchemas.js"
-import { orderConfirmationListInputSchema, type OrderConfirmationListInput } from "./orderConfirmationSchemas.js"
+import { type LexwareUnknownResponse, lexwareUnknownResponseSchema } from "../shared/lexwareSchemas.js"
+import { type OrderConfirmationListInput, orderConfirmationListInputSchema } from "./orderConfirmationSchemas.js"
 
 export async function orderConfirmationList(
   client: LexwareClient,

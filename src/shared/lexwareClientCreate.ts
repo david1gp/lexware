@@ -1,5 +1,5 @@
-import { createResult, createResultError, type Result } from "#result"
 import * as a from "valibot"
+import { createResult, createResultError, type Result } from "#result"
 import type { LexwareClient, LexwareFetch } from "./LexwareClient.js"
 
 const lexwareClientCreateInputSchema = a.object({

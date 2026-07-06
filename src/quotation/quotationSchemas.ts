@@ -14,7 +14,9 @@ export const quotationBodySchema = a.looseObject({
   paymentConditions: a.optional(a.unknown()),
 })
 
-export const quotationListInputSchema = a.object({ page: a.optional(a.number()) })
+export const quotationListInputSchema = a.object({
+  page: a.optional(a.number()),
+})
 
 export type QuotationBody = a.InferOutput<typeof quotationBodySchema>
 export type QuotationListInput = a.InferOutput<typeof quotationListInputSchema>

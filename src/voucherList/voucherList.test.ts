@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
+import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 import { voucherListGet } from "./voucherListGet.js"
 import { voucherListList } from "./voucherListList.js"
-import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 
 test("voucherListGet gets hyphenated voucher list path", async () => {
   const { client, calls } = lexwareTestClient()

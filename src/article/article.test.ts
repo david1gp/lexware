@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
+import { lexwareRequestBodyJson, lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 import { articleCreate } from "./articleCreate.js"
 import { articleList } from "./articleList.js"
-import { lexwareRequestBodyJson, lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 
 test("articleList builds list query", async () => {
   const { client, calls } = lexwareTestClient()
@@ -14,9 +14,16 @@ test("articleList builds list query", async () => {
 
 test("articleCreate validates input and defaults version", async () => {
   const { client, calls } = lexwareTestClient()
-  const result = await articleCreate(client, { type: "SERVICE", title: "Consulting" })
+  const result = await articleCreate(client, {
+    type: "SERVICE",
+    title: "Consulting",
+  })
   expect(result.success).toBe(true)
-  expect(await lexwareRequestBodyJson(calls[0]!)).toEqual({ type: "SERVICE", title: "Consulting", version: 0 })
+  expect(await lexwareRequestBodyJson(calls[0]!)).toEqual({
+    type: "SERVICE",
+    title: "Consulting",
+    version: 0,
+  })
 
   const invalid = await articleCreate(client, { type: "INVALID" } as never)
   expect(invalid.success).toBe(false)

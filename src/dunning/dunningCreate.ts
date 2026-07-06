@@ -1,10 +1,10 @@
-import { createResultError, type PromiseResult } from "#result"
 import * as a from "valibot"
+import { createResultError, type PromiseResult } from "#result"
 import type { LexwareClient } from "../shared/LexwareClient.js"
 import { lexwareErrorData } from "../shared/lexwareErrorData.js"
 import { lexwareRequest } from "../shared/lexwareRequest.js"
-import { lexwareUnknownResponseSchema, type LexwareUnknownResponse } from "../shared/lexwareSchemas.js"
-import { dunningCreateInputSchema, type DunningCreateInput } from "./dunningSchemas.js"
+import { type LexwareUnknownResponse, lexwareUnknownResponseSchema } from "../shared/lexwareSchemas.js"
+import { type DunningCreateInput, dunningCreateInputSchema } from "./dunningSchemas.js"
 
 export async function dunningCreate(
   client: LexwareClient,
@@ -41,7 +41,10 @@ export async function dunningCreate(
     op,
     method: "POST",
     path: "/v1/dunnings",
-    query: { precedingSalesVoucherId: r.output.precedingSalesVoucherId, finalize: r.output.finalize },
+    query: {
+      precedingSalesVoucherId: r.output.precedingSalesVoucherId,
+      finalize: r.output.finalize,
+    },
     body,
     schema: lexwareUnknownResponseSchema,
   })

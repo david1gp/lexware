@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { countryList } from "./countryList.js"
 import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
+import { countryList } from "./countryList.js"
 
 test("countryList gets countries", async () => {
   const { client, calls } = lexwareTestClient()

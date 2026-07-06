@@ -1,11 +1,11 @@
-import { createResult, createResultError, type PromiseResult, resultTryParsingFetchErr } from "#result"
 import * as a from "valibot"
+import { createResult, createResultError, type PromiseResult, resultTryParsingFetchErr } from "#result"
 import type { LexwareBinaryResponse } from "./LexwareBinaryResponse.js"
 import type { LexwareClient } from "./LexwareClient.js"
 import { lexwareErrorData } from "./lexwareErrorData.js"
+import { lexwareFilenameFromContentDisposition } from "./lexwareFilenameFromContentDisposition.js"
 import type { LexwareQuery } from "./lexwareQueryAppend.js"
 import { lexwareQueryAppend } from "./lexwareQueryAppend.js"
-import { lexwareFilenameFromContentDisposition } from "./lexwareFilenameFromContentDisposition.js"
 
 export type LexwareRequestInput<TSchema extends a.GenericSchema = a.GenericSchema> = {
   op?: string
@@ -80,7 +80,10 @@ export async function lexwareRequestBinary(
 
   let response: Response
   try {
-    response = await client.fetch(url, { method: input.method ?? "GET", headers })
+    response = await client.fetch(url, {
+      method: input.method ?? "GET",
+      headers,
+    })
   } catch (error) {
     return createResultError(op, "Fetch failed", error instanceof Error ? error.message : String(error))
   }

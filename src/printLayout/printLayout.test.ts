@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { printLayoutList } from "./printLayoutList.js"
 import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
+import { printLayoutList } from "./printLayoutList.js"
 
 test("printLayoutList gets print layouts", async () => {
   const { client, calls } = lexwareTestClient()

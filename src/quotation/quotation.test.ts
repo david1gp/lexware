@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test"
+import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 import { quotationCreate } from "./quotationCreate.js"
 import { quotationDelete } from "./quotationDelete.js"
 import { quotationList } from "./quotationList.js"
-import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 
 test("quotationList builds page query", async () => {
   const { client, calls } = lexwareTestClient()
@@ -19,6 +19,8 @@ test("quotationDelete deletes quotation", async () => {
 
 test("quotationCreate rejects invalid line items", async () => {
   const { client } = lexwareTestClient()
-  const result = await quotationCreate(client, { lineItems: [{ type: "wrong" }] } as never)
+  const result = await quotationCreate(client, {
+    lineItems: [{ type: "wrong" }],
+  } as never)
   expect(result.success).toBe(false)
 })

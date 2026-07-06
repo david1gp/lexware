@@ -1,9 +1,9 @@
-import { createResult, createResultError, type PromiseResult, resultTryParsingFetchErr } from "#result"
 import * as a from "valibot"
+import { createResult, createResultError, type PromiseResult, resultTryParsingFetchErr } from "#result"
 import type { LexwareClient } from "../shared/LexwareClient.js"
 import { lexwareErrorData } from "../shared/lexwareErrorData.js"
-import { lexwareUnknownResponseSchema, type LexwareUnknownResponse } from "../shared/lexwareSchemas.js"
-import { fileUploadInputSchema, type FileUploadInput } from "./fileSchemas.js"
+import { type LexwareUnknownResponse, lexwareUnknownResponseSchema } from "../shared/lexwareSchemas.js"
+import { type FileUploadInput, fileUploadInputSchema } from "./fileSchemas.js"
 
 export async function fileUpload(client: LexwareClient, input: FileUploadInput): PromiseResult<LexwareUnknownResponse> {
   const op = "fileUpload"
@@ -15,10 +15,17 @@ export async function fileUpload(client: LexwareClient, input: FileUploadInput):
   const blob = r.output.data instanceof Blob ? r.output.data : new Blob([r.output.data as BlobPart])
   form.set("file", blob, r.output.filename)
 
-  const headers = new Headers({ Accept: "application/json", Authorization: `Bearer ${client.accessToken}` })
+  const headers = new Headers({
+    Accept: "application/json",
+    Authorization: `Bearer ${client.accessToken}`,
+  })
   let response: Response
   try {
-    response = await client.fetch(new URL("/v1/files", client.baseUrl), { method: "POST", headers, body: form })
+    response = await client.fetch(new URL("/v1/files", client.baseUrl), {
+      method: "POST",
+      headers,
+      body: form,
+    })
   } catch (error) {
     return createResultError(op, "Fetch failed", error instanceof Error ? error.message : String(error))
   }
