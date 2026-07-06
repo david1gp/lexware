@@ -1,0 +1,24 @@
+import { expect, test } from "bun:test"
+import { quotationCreate } from "./quotationCreate.js"
+import { quotationDelete } from "./quotationDelete.js"
+import { quotationList } from "./quotationList.js"
+import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
+
+test("quotationList builds page query", async () => {
+  const { client, calls } = lexwareTestClient()
+  await quotationList(client, { page: 3 })
+  expect(String(calls[0]?.input)).toBe("https://api.lexware.io/v1/quotations?page=3")
+})
+
+test("quotationDelete deletes quotation", async () => {
+  const { client, calls } = lexwareTestClient()
+  await quotationDelete(client, "q1")
+  expect(String(calls[0]?.input)).toBe("https://api.lexware.io/v1/quotations/q1")
+  expect(calls[0]?.init?.method).toBe("DELETE")
+})
+
+test("quotationCreate rejects invalid line items", async () => {
+  const { client } = lexwareTestClient()
+  const result = await quotationCreate(client, { lineItems: [{ type: "wrong" }] } as never)
+  expect(result.success).toBe(false)
+})
