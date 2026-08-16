@@ -2,10 +2,10 @@
   "name": "@adaptive-ds/lexware",
   "version": "0.1.0",
   "scripts": {
-    "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json",
-    "check": "bunx tsgo --noEmit",
+    "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json && chmod +x ./dist/cli.js",
+    "check": "bun tsc --noEmit",
     "format": "biome format --write src package.json tsconfig.json tsconfig.lib.json biome.json",
-    "test": "bun test",
+    "test": "bun run build && bun test",
     "test:w": "bun test --watch",
     "release": "bash ./ops/release.sh",
     "update": "bun update",
@@ -31,6 +31,9 @@
   },
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "lexware": "./dist/cli.js"
+  },
   "private": false,
   "license": "MIT",
   "description": "TypeScript Result-based API clients for Lexware Office.",
@@ -62,5 +65,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@stricli/core": "^1.2.5"
+  }
 }
