@@ -1,6 +1,6 @@
 {
   "name": "@adaptive-ds/lexware",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "scripts": {
     "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json && chmod +x ./dist/cli.js",
     "check": "bun tsc --noEmit",
