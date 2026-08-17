@@ -1,152 +1,255 @@
 import type { FlagParametersForType } from "@stricli/core"
 import * as a from "valibot"
+import {
+  quotationAddressSchema,
+  quotationCreateBodySchema,
+  quotationLineItemSchema,
+  quotationPaymentConditionsSchema,
+  quotationPaymentDiscountConditionsSchema,
+  quotationSubItemSchema,
+  quotationTaxConditionsSchema,
+  quotationTotalPriceSchema,
+  quotationUnitPriceSchema,
+} from "../quotation/quotationSchemas.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 import type { QuotationCreateInputFlags } from "./quotationCreateInput.js"
 
-const quotationLineItemTypeSchema = a.picklist(["custom", "material", "service", "text"])
-const quotationTaxTypeSchema = a.picklist([
-  "net",
-  "gross",
-  "vatfree",
-  "intraCommunitySupply",
-  "constructionService13b",
-  "externalService13b",
-  "thirdPartyCountryService",
-  "thirdPartyCountryDelivery",
-  "photovoltaicEquipment",
-])
-const quotationTaxSubTypeSchema = a.picklist(["distanceSales", "electronicServices"])
-
 const quotationOptions = {
-  title: cliOptionCreate(cliOptionSchemas.string, "Quotation title", { optional: true }),
-  introduction: cliOptionCreate(cliOptionSchemas.string, "Quotation introduction", { optional: true }),
-  remark: cliOptionCreate(cliOptionSchemas.string, "Quotation remark", { optional: true }),
-  language: cliOptionCreate(a.picklist(["de", "en"]), "Quotation language", { optional: true }),
-  printLayoutId: cliOptionCreate(cliOptionSchemas.id, "Quotation print-layout ID", { optional: true }),
-  voucherDate: cliOptionCreate(cliOptionSchemas.dateTime, "Voucher date", { optional: true }),
-  expirationDate: cliOptionCreate(cliOptionSchemas.dateTime, "Quotation expiration date", { optional: true }),
-  addressContactId: cliOptionCreate(cliOptionSchemas.id, "Address contact ID", { optional: true }),
-  addressName: cliOptionCreate(cliOptionSchemas.string, "Address name", { optional: true }),
-  addressSupplement: cliOptionCreate(cliOptionSchemas.string, "Address supplement", { optional: true }),
-  addressStreet: cliOptionCreate(cliOptionSchemas.string, "Address street", { optional: true }),
-  addressCity: cliOptionCreate(cliOptionSchemas.string, "Address city", { optional: true }),
-  addressZip: cliOptionCreate(cliOptionSchemas.string, "Address ZIP code", { optional: true }),
-  addressCountryCode: cliOptionCreate(cliOptionSchemas.string, "Address country code", { optional: true }),
-  lineItemId: cliOptionCreate(cliOptionSchemas.id, "Line-item ID", { optional: true, variadic: true }),
-  lineItemType: cliOptionCreate(quotationLineItemTypeSchema, "Line-item type", { optional: true, variadic: true }),
-  lineItemName: cliOptionCreate(cliOptionSchemas.string, "Line-item name", { optional: true, variadic: true }),
-  lineItemDescription: cliOptionCreate(cliOptionSchemas.string, "Line-item description", {
+  title: cliOptionCreate(a.unwrap(quotationCreateBodySchema.entries.title), "Quotation title", { optional: true }),
+  introduction: cliOptionCreate(a.unwrap(quotationCreateBodySchema.entries.introduction), "Quotation introduction", {
+    optional: true,
+  }),
+  remark: cliOptionCreate(a.unwrap(quotationCreateBodySchema.entries.remark), "Quotation remark", { optional: true }),
+  language: cliOptionCreate(a.unwrap(quotationCreateBodySchema.entries.language), "Quotation language", {
+    optional: true,
+  }),
+  printLayoutId: cliOptionCreate(
+    a.unwrap(quotationCreateBodySchema.entries.printLayoutId),
+    "Quotation print-layout ID",
+    {
+      optional: true,
+    },
+  ),
+  voucherDate: cliOptionCreate(quotationCreateBodySchema.entries.voucherDate, "Voucher date", { optional: true }),
+  expirationDate: cliOptionCreate(quotationCreateBodySchema.entries.expirationDate, "Quotation expiration date", {
+    optional: true,
+  }),
+  addressContactId: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.contactId), "Address contact ID", {
+    optional: true,
+  }),
+  addressName: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.name), "Address name", { optional: true }),
+  addressSupplement: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.supplement), "Address supplement", {
+    optional: true,
+  }),
+  addressStreet: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.street), "Address street", {
+    optional: true,
+  }),
+  addressCity: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.city), "Address city", { optional: true }),
+  addressZip: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.zip), "Address ZIP code", { optional: true }),
+  addressCountryCode: cliOptionCreate(a.unwrap(quotationAddressSchema.entries.countryCode), "Address country code", {
+    optional: true,
+  }),
+  lineItemId: cliOptionCreate(a.unwrap(quotationLineItemSchema.entries.id), "Line-item ID", {
     optional: true,
     variadic: true,
   }),
-  lineItemQuantity: cliOptionCreate(cliOptionSchemas.number, "Line-item quantity", { optional: true, variadic: true }),
-  lineItemUnitName: cliOptionCreate(cliOptionSchemas.string, "Line-item unit name", { optional: true, variadic: true }),
-  lineItemUnitPriceCurrency: cliOptionCreate(a.literal("EUR"), "Line-item unit-price currency", {
+  lineItemType: cliOptionCreate(quotationLineItemSchema.entries.type, "Line-item type", {
     optional: true,
     variadic: true,
   }),
-  lineItemUnitPriceNetAmount: cliOptionCreate(cliOptionSchemas.number, "Line-item unit-price net amount", {
+  lineItemName: cliOptionCreate(quotationLineItemSchema.entries.name, "Line-item name", {
     optional: true,
     variadic: true,
   }),
-  lineItemUnitPriceGrossAmount: cliOptionCreate(cliOptionSchemas.number, "Line-item unit-price gross amount", {
+  lineItemDescription: cliOptionCreate(a.unwrap(quotationLineItemSchema.entries.description), "Line-item description", {
     optional: true,
     variadic: true,
   }),
-  lineItemUnitPriceTaxRatePercentage: cliOptionCreate(cliOptionSchemas.number, "Line-item unit-price tax rate", {
+  lineItemQuantity: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationLineItemSchema.entries.quantity)),
+    "Line-item quantity",
+    { optional: true, variadic: true },
+  ),
+  lineItemUnitName: cliOptionCreate(a.unwrap(quotationLineItemSchema.entries.unitName), "Line-item unit name", {
     optional: true,
     variadic: true,
   }),
-  lineItemDiscountPercentage: cliOptionCreate(cliOptionSchemas.number, "Line-item discount percentage", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemAmount: cliOptionCreate(cliOptionSchemas.number, "Line-item amount", { optional: true, variadic: true }),
-  lineItemOptional: cliOptionCreate(cliOptionSchemas.boolean, "Line-item is optional", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemAlternative: cliOptionCreate(cliOptionSchemas.boolean, "Line-item is an alternative", {
-    optional: true,
-    variadic: true,
-  }),
+  lineItemUnitPriceCurrency: cliOptionCreate(
+    quotationUnitPriceSchema.entries.currency,
+    "Line-item unit-price currency",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  lineItemUnitPriceNetAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationUnitPriceSchema.entries.netAmount)),
+    "Line-item unit-price net amount",
+    { optional: true, variadic: true },
+  ),
+  lineItemUnitPriceGrossAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationUnitPriceSchema.entries.grossAmount)),
+    "Line-item unit-price gross amount",
+    { optional: true, variadic: true },
+  ),
+  lineItemUnitPriceTaxRatePercentage: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, quotationUnitPriceSchema.entries.taxRatePercentage),
+    "Line-item unit-price tax rate",
+    { optional: true, variadic: true },
+  ),
+  lineItemDiscountPercentage: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationLineItemSchema.entries.discountPercentage)),
+    "Line-item discount percentage",
+    { optional: true, variadic: true },
+  ),
+  lineItemAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationLineItemSchema.entries.lineItemAmount)),
+    "Line-item amount",
+    { optional: true, variadic: true },
+  ),
+  lineItemOptional: cliOptionCreate(
+    a.pipe(cliOptionSchemas.boolean, a.unwrap(quotationLineItemSchema.entries.optional)),
+    "Line-item is optional",
+    { optional: true, variadic: true },
+  ),
+  lineItemAlternative: cliOptionCreate(
+    a.pipe(cliOptionSchemas.boolean, a.unwrap(quotationLineItemSchema.entries.alternative)),
+    "Line-item is an alternative",
+    { optional: true, variadic: true },
+  ),
   lineItemSubItemParentIndex: cliOptionCreate(cliOptionSchemas.integer, "Subitem parent line-item index", {
     optional: true,
     variadic: true,
   }),
-  lineItemSubItemId: cliOptionCreate(cliOptionSchemas.id, "Subitem ID", { optional: true, variadic: true }),
-  lineItemSubItemType: cliOptionCreate(quotationLineItemTypeSchema, "Subitem type", {
+  lineItemSubItemId: cliOptionCreate(a.unwrap(quotationSubItemSchema.entries.id), "Subitem ID", {
     optional: true,
     variadic: true,
   }),
-  lineItemSubItemName: cliOptionCreate(cliOptionSchemas.string, "Subitem name", { optional: true, variadic: true }),
-  lineItemSubItemDescription: cliOptionCreate(cliOptionSchemas.string, "Subitem description", {
+  lineItemSubItemType: cliOptionCreate(quotationSubItemSchema.entries.type, "Subitem type", {
     optional: true,
     variadic: true,
   }),
-  lineItemSubItemQuantity: cliOptionCreate(cliOptionSchemas.number, "Subitem quantity", {
+  lineItemSubItemName: cliOptionCreate(quotationSubItemSchema.entries.name, "Subitem name", {
     optional: true,
     variadic: true,
   }),
-  lineItemSubItemUnitName: cliOptionCreate(cliOptionSchemas.string, "Subitem unit name", {
+  lineItemSubItemDescription: cliOptionCreate(
+    a.unwrap(quotationSubItemSchema.entries.description),
+    "Subitem description",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  lineItemSubItemQuantity: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationSubItemSchema.entries.quantity)),
+    "Subitem quantity",
+    { optional: true, variadic: true },
+  ),
+  lineItemSubItemUnitName: cliOptionCreate(a.unwrap(quotationSubItemSchema.entries.unitName), "Subitem unit name", {
     optional: true,
     variadic: true,
   }),
-  lineItemSubItemUnitPriceCurrency: cliOptionCreate(a.literal("EUR"), "Subitem unit-price currency", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemSubItemUnitPriceNetAmount: cliOptionCreate(cliOptionSchemas.number, "Subitem unit-price net amount", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemSubItemUnitPriceGrossAmount: cliOptionCreate(cliOptionSchemas.number, "Subitem unit-price gross amount", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemSubItemUnitPriceTaxRatePercentage: cliOptionCreate(cliOptionSchemas.number, "Subitem unit-price tax rate", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemSubItemDiscountPercentage: cliOptionCreate(cliOptionSchemas.number, "Subitem discount percentage", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemSubItemAmount: cliOptionCreate(cliOptionSchemas.number, "Subitem amount", {
-    optional: true,
-    variadic: true,
-  }),
-  lineItemSubItemAlternative: cliOptionCreate(cliOptionSchemas.boolean, "Subitem is an alternative", {
-    optional: true,
-    variadic: true,
-  }),
-  totalPriceCurrency: cliOptionCreate(a.literal("EUR"), "Total-price currency", { optional: true }),
-  totalPriceTotalNetAmount: cliOptionCreate(cliOptionSchemas.number, "Total net amount", { optional: true }),
-  totalPriceTotalGrossAmount: cliOptionCreate(cliOptionSchemas.number, "Total gross amount", { optional: true }),
-  totalPriceTotalTaxAmount: cliOptionCreate(cliOptionSchemas.number, "Total tax amount", { optional: true }),
-  totalPriceTotalDiscountAbsolute: cliOptionCreate(cliOptionSchemas.number, "Total discount amount", {
-    optional: true,
-  }),
-  totalPriceTotalDiscountPercentage: cliOptionCreate(cliOptionSchemas.number, "Total discount percentage", {
-    optional: true,
-  }),
-  taxConditionsTaxType: cliOptionCreate(quotationTaxTypeSchema, "Tax type", { optional: true }),
-  taxConditionsTaxSubType: cliOptionCreate(quotationTaxSubTypeSchema, "Tax subtype", { optional: true }),
-  taxConditionsTaxTypeNote: cliOptionCreate(cliOptionSchemas.string, "Tax type note", { optional: true }),
-  paymentConditionsPaymentTermLabel: cliOptionCreate(cliOptionSchemas.string, "Payment-term label", {
-    optional: true,
-  }),
-  paymentConditionsPaymentTermDuration: cliOptionCreate(cliOptionSchemas.integer, "Payment-term duration", {
+  lineItemSubItemUnitPriceCurrency: cliOptionCreate(
+    quotationUnitPriceSchema.entries.currency,
+    "Subitem unit-price currency",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  lineItemSubItemUnitPriceNetAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationUnitPriceSchema.entries.netAmount)),
+    "Subitem unit-price net amount",
+    { optional: true, variadic: true },
+  ),
+  lineItemSubItemUnitPriceGrossAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationUnitPriceSchema.entries.grossAmount)),
+    "Subitem unit-price gross amount",
+    { optional: true, variadic: true },
+  ),
+  lineItemSubItemUnitPriceTaxRatePercentage: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, quotationUnitPriceSchema.entries.taxRatePercentage),
+    "Subitem unit-price tax rate",
+    { optional: true, variadic: true },
+  ),
+  lineItemSubItemDiscountPercentage: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationSubItemSchema.entries.discountPercentage)),
+    "Subitem discount percentage",
+    { optional: true, variadic: true },
+  ),
+  lineItemSubItemAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationSubItemSchema.entries.lineItemAmount)),
+    "Subitem amount",
+    { optional: true, variadic: true },
+  ),
+  lineItemSubItemAlternative: cliOptionCreate(
+    a.pipe(cliOptionSchemas.boolean, quotationSubItemSchema.entries.alternative),
+    "Subitem is an alternative",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  totalPriceCurrency: cliOptionCreate(quotationTotalPriceSchema.entries.currency, "Total-price currency", {
     optional: true,
   }),
+  totalPriceTotalNetAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationTotalPriceSchema.entries.totalNetAmount)),
+    "Total net amount",
+    { optional: true },
+  ),
+  totalPriceTotalGrossAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationTotalPriceSchema.entries.totalGrossAmount)),
+    "Total gross amount",
+    { optional: true },
+  ),
+  totalPriceTotalTaxAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationTotalPriceSchema.entries.totalTaxAmount)),
+    "Total tax amount",
+    { optional: true },
+  ),
+  totalPriceTotalDiscountAbsolute: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationTotalPriceSchema.entries.totalDiscountAbsolute)),
+    "Total discount amount",
+    { optional: true },
+  ),
+  totalPriceTotalDiscountPercentage: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationTotalPriceSchema.entries.totalDiscountPercentage)),
+    "Total discount percentage",
+    { optional: true },
+  ),
+  taxConditionsTaxType: cliOptionCreate(quotationTaxConditionsSchema.entries.taxType, "Tax type", { optional: true }),
+  taxConditionsTaxSubType: cliOptionCreate(a.unwrap(quotationTaxConditionsSchema.entries.taxSubType), "Tax subtype", {
+    optional: true,
+  }),
+  taxConditionsTaxTypeNote: cliOptionCreate(
+    a.unwrap(quotationTaxConditionsSchema.entries.taxTypeNote),
+    "Tax type note",
+    {
+      optional: true,
+    },
+  ),
+  paymentConditionsPaymentTermLabel: cliOptionCreate(
+    a.unwrap(quotationPaymentConditionsSchema.entries.paymentTermLabel),
+    "Payment-term label",
+    {
+      optional: true,
+    },
+  ),
+  paymentConditionsPaymentTermDuration: cliOptionCreate(
+    a.pipe(cliOptionSchemas.integer, a.unwrap(quotationPaymentConditionsSchema.entries.paymentTermDuration)),
+    "Payment-term duration",
+    { optional: true },
+  ),
   paymentConditionsPaymentDiscountConditionsDiscountPercentage: cliOptionCreate(
-    cliOptionSchemas.number,
+    a.pipe(cliOptionSchemas.number, a.unwrap(quotationPaymentDiscountConditionsSchema.entries.discountPercentage)),
     "Payment discount percentage",
     { optional: true },
   ),
   paymentConditionsPaymentDiscountConditionsDiscountRange: cliOptionCreate(
-    cliOptionSchemas.integer,
+    a.pipe(cliOptionSchemas.integer, a.unwrap(quotationPaymentDiscountConditionsSchema.entries.discountRange)),
     "Payment discount range",
     { optional: true },
   ),

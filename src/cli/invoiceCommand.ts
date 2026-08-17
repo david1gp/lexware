@@ -3,7 +3,14 @@ import * as a from "valibot"
 import { invoiceCreate } from "../invoice/invoiceCreate.js"
 import { invoiceGet } from "../invoice/invoiceGet.js"
 import { invoiceList } from "../invoice/invoiceList.js"
+import {
+  type InvoiceListInput,
+  invoiceCreateInputSchema,
+  invoiceListInputSchema,
+  invoiceUpdateInputSchema,
+} from "../invoice/invoiceSchemas.js"
 import { invoiceUpdate } from "../invoice/invoiceUpdate.js"
+import { lexwareIdInputSchema } from "../shared/lexwareSchemas.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
@@ -11,38 +18,22 @@ import { cliCommandExecute } from "./cliCommandExecute.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 import type { InvoiceCreateInputFlags } from "./invoiceCreateInput.js"
-import {
-  invoiceBodyInputFromFlags,
-  invoiceBodyInputSchema,
-  invoiceCreateFlagsSchema,
-  invoiceCreateInputSchema,
-} from "./invoiceCreateInput.js"
+import { invoiceBodyInputFromFlags, invoiceCreateInputFromFlags } from "./invoiceCreateInput.js"
 import { invoiceCreateOptions, invoiceOptions } from "./invoiceCreateOptions.js"
 
-const invoiceListInputSchema = a.object({
-  page: a.optional(a.number()),
-  status: a.optional(a.string()),
-})
-type InvoiceListFlags = CliClientInput & a.InferOutput<typeof invoiceListInputSchema>
+type InvoiceListFlags = CliClientInput & InvoiceListInput
 
-const invoiceIdInputSchema = a.object({ id: cliOptionSchemas.id })
-type InvoiceIdFlags = CliClientInput & a.InferOutput<typeof invoiceIdInputSchema>
+type InvoiceIdFlags = CliClientInput & { readonly id: string }
 type InvoiceCreateFlags = CliClientInput & InvoiceCreateInputFlags
 type InvoiceUpdateFlags = CliClientInput & Omit<InvoiceCreateInputFlags, "finalize"> & InvoiceIdFlags
 
-const invoiceUpdateInputSchema = a.pipe(
-  a.intersect([invoiceIdInputSchema, invoiceCreateFlagsSchema]),
-  a.transform((flags) => ({ id: flags.id, invoice: invoiceBodyInputFromFlags(flags) })),
-  a.object({ id: cliOptionSchemas.id, invoice: invoiceBodyInputSchema }),
-)
-
 const invoiceCreateCommand = buildCommand({
   func(this: CliCommandContext, flags: InvoiceCreateFlags) {
-    const { accessToken, baseUrl, ...input } = flags
+    const { accessToken, baseUrl, ...inputFlags } = flags
 
     return cliCommandExecute(this, {
       clientInput: { accessToken, baseUrl },
-      input,
+      input: invoiceCreateInputFromFlags(inputFlags),
       inputSchema: invoiceCreateInputSchema,
       execute: invoiceCreate,
       op: "invoiceCreate",
@@ -61,9 +52,11 @@ const invoiceCreateCommand = buildCommand({
 
 const invoiceUpdateCommand = buildCommand({
   func(this: CliCommandContext, flags: InvoiceUpdateFlags) {
+    const { accessToken, baseUrl, ...inputFlags } = flags
+
     return cliCommandExecute(this, {
-      clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
-      input: flags,
+      clientInput: { accessToken, baseUrl },
+      input: { id: inputFlags.id, invoice: invoiceBodyInputFromFlags(inputFlags) },
       inputSchema: invoiceUpdateInputSchema,
       execute: (client, input) => invoiceUpdate(client, input.id, input.invoice),
       op: "invoiceUpdate",
@@ -72,7 +65,7 @@ const invoiceUpdateCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Invoice ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Invoice ID"),
       ...invoiceOptions,
     },
   },
@@ -94,8 +87,12 @@ const invoiceListCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      page: cliOptionCreate(cliOptionSchemas.integer, "Page number", { optional: true }),
-      status: cliOptionCreate(cliOptionSchemas.string, "Invoice status", { optional: true }),
+      page: cliOptionCreate(
+        a.pipe(cliOptionSchemas.integer, a.unwrap(invoiceListInputSchema.entries.page)),
+        "Page number",
+        { optional: true },
+      ),
+      status: cliOptionCreate(a.unwrap(invoiceListInputSchema.entries.status), "Invoice status", { optional: true }),
     },
   },
   docs: {
@@ -108,7 +105,7 @@ const invoiceGetCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: invoiceIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => invoiceGet(client, input.id),
       op: "invoiceGet",
     })
@@ -116,7 +113,7 @@ const invoiceGetCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Invoice ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Invoice ID"),
     },
   },
   docs: {

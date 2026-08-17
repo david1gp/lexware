@@ -1,4 +1,5 @@
 import * as a from "valibot"
+import { lexwareIdSchema } from "../shared/lexwareSchemas.js"
 
 const cliOptionBooleanSchema = a.pipe(
   a.picklist(["true", "false"]),
@@ -20,7 +21,7 @@ export const cliOptionSchemas = {
   boolean: cliOptionBooleanSchema,
   date: cliOptionDateSchema,
   dateTime: cliOptionDateTimeSchema,
-  id: cliOptionNonEmptyStringSchema,
+  id: lexwareIdSchema,
   integer: cliOptionIntegerSchema,
   number: cliOptionFiniteNumberSchema,
   nonEmptyString: cliOptionNonEmptyStringSchema,

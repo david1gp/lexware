@@ -4,7 +4,13 @@ import { quotationCreate } from "../quotation/quotationCreate.js"
 import { quotationDelete } from "../quotation/quotationDelete.js"
 import { quotationGet } from "../quotation/quotationGet.js"
 import { quotationList } from "../quotation/quotationList.js"
+import {
+  quotationCreateInputSchema as quotationCreateDomainInputSchema,
+  quotationListInputSchema,
+  quotationUpdateInputSchema as quotationUpdateDomainInputSchema,
+} from "../quotation/quotationSchemas.js"
 import { quotationUpdate } from "../quotation/quotationUpdate.js"
+import { lexwareIdInputSchema, lexwareIdSchema } from "../shared/lexwareSchemas.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
@@ -12,29 +18,14 @@ import { cliCommandExecute } from "./cliCommandExecute.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 import type { QuotationCreateInputFlags } from "./quotationCreateInput.js"
-import {
-  quotationBodyInputFromFlags,
-  quotationBodyInputSchema,
-  quotationCreateFlagsSchema,
-  quotationCreateInputSchema,
-} from "./quotationCreateInput.js"
+import { quotationBodyInputFromFlags } from "./quotationCreateInput.js"
 import { quotationCreateOptions, quotationOptions } from "./quotationCreateOptions.js"
 
-const quotationListInputSchema = a.object({
-  page: a.optional(a.number()),
-})
 type QuotationListFlags = CliClientInput & a.InferOutput<typeof quotationListInputSchema>
 
-const quotationIdInputSchema = a.object({ id: cliOptionSchemas.id })
-type QuotationIdFlags = CliClientInput & a.InferOutput<typeof quotationIdInputSchema>
+type QuotationIdFlags = CliClientInput & a.InferOutput<typeof lexwareIdInputSchema>
 type QuotationCreateFlags = CliClientInput & QuotationCreateInputFlags
 type QuotationUpdateFlags = CliClientInput & QuotationCreateInputFlags & QuotationIdFlags
-
-const quotationUpdateInputSchema = a.pipe(
-  a.intersect([quotationIdInputSchema, quotationCreateFlagsSchema]),
-  a.transform((flags) => ({ id: flags.id, quotation: quotationBodyInputFromFlags(flags) })),
-  a.object({ id: cliOptionSchemas.id, quotation: quotationBodyInputSchema }),
-)
 
 const quotationCreateCommand = buildCommand({
   func(this: CliCommandContext, flags: QuotationCreateFlags) {
@@ -42,8 +33,8 @@ const quotationCreateCommand = buildCommand({
 
     return cliCommandExecute(this, {
       clientInput: { accessToken, baseUrl },
-      input,
-      inputSchema: quotationCreateInputSchema,
+      input: quotationBodyInputFromFlags(input),
+      inputSchema: quotationCreateDomainInputSchema,
       execute: quotationCreate,
       op: "quotationCreate",
     })
@@ -63,8 +54,11 @@ const quotationUpdateCommand = buildCommand({
   func(this: CliCommandContext, flags: QuotationUpdateFlags) {
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
-      input: flags,
-      inputSchema: quotationUpdateInputSchema,
+      input: {
+        id: flags.id,
+        quotation: quotationBodyInputFromFlags(flags),
+      },
+      inputSchema: quotationUpdateDomainInputSchema,
       execute: (client, input) => quotationUpdate(client, input.id, input.quotation),
       op: "quotationUpdate",
     })
@@ -72,7 +66,7 @@ const quotationUpdateCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Quotation ID"),
+      id: cliOptionCreate(lexwareIdSchema, "Quotation ID"),
       ...quotationOptions,
     },
   },
@@ -107,7 +101,7 @@ const quotationGetCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: quotationIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => quotationGet(client, input.id),
       op: "quotationGet",
     })
@@ -115,7 +109,7 @@ const quotationGetCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Quotation ID"),
+      id: cliOptionCreate(lexwareIdSchema, "Quotation ID"),
     },
   },
   docs: {
@@ -128,7 +122,7 @@ const quotationDeleteCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: quotationIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => quotationDelete(client, input.id),
       op: "quotationDelete",
     })
@@ -136,7 +130,7 @@ const quotationDeleteCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Quotation ID"),
+      id: cliOptionCreate(lexwareIdSchema, "Quotation ID"),
     },
   },
   docs: {

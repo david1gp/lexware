@@ -1,7 +1,9 @@
 import { buildCommand, buildRouteMap } from "@stricli/core"
 import * as a from "valibot"
+import { lexwareIdInputSchema } from "../shared/lexwareSchemas.js"
 import { voucherListGet } from "../voucherList/voucherListGet.js"
 import { voucherListList } from "../voucherList/voucherListList.js"
+import { voucherListListInputEntries, voucherListListInputSchema } from "../voucherList/voucherListSchemas.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
@@ -9,15 +11,9 @@ import { cliCommandExecute } from "./cliCommandExecute.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 
-const voucherListListInputSchema = a.object({
-  page: a.optional(a.number()),
-  status: a.optional(a.string()),
-  voucherNumber: a.optional(a.string()),
-})
 type VoucherListListFlags = CliClientInput & a.InferOutput<typeof voucherListListInputSchema>
 
-const voucherListIdInputSchema = a.object({ id: cliOptionSchemas.id })
-type VoucherListIdFlags = CliClientInput & a.InferOutput<typeof voucherListIdInputSchema>
+type VoucherListIdFlags = CliClientInput & a.InferOutput<typeof lexwareIdInputSchema>
 
 const voucherListListCommand = buildCommand({
   func(this: CliCommandContext, flags: VoucherListListFlags) {
@@ -36,9 +32,11 @@ const voucherListListCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      page: cliOptionCreate(cliOptionSchemas.integer, "Page number", { optional: true }),
-      status: cliOptionCreate(cliOptionSchemas.string, "Voucher list status", { optional: true }),
-      voucherNumber: cliOptionCreate(cliOptionSchemas.string, "Voucher number", { optional: true }),
+      page: cliOptionCreate(a.pipe(cliOptionSchemas.integer, voucherListListInputEntries.page), "Page number", {
+        optional: true,
+      }),
+      status: cliOptionCreate(voucherListListInputEntries.status, "Voucher list status", { optional: true }),
+      voucherNumber: cliOptionCreate(voucherListListInputEntries.voucherNumber, "Voucher number", { optional: true }),
     },
   },
   docs: {
@@ -51,7 +49,7 @@ const voucherListGetCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: voucherListIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => voucherListGet(client, input.id),
       op: "voucherListGet",
     })
@@ -59,7 +57,7 @@ const voucherListGetCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Voucher list ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Voucher list ID"),
     },
   },
   docs: {

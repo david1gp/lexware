@@ -3,48 +3,51 @@ import { buildCommand, buildRouteMap } from "@stricli/core"
 import * as a from "valibot"
 import { createResult, createResultError } from "#result"
 import { fileDownload } from "../file/fileDownload.js"
+import {
+  fileContentTypeSchema,
+  fileDownloadInputSchema,
+  fileFilenameSchema,
+  fileTypeSchema,
+} from "../file/fileSchemas.js"
 import { fileUpload } from "../file/fileUpload.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
 import { cliCommandExecute } from "./cliCommandExecute.js"
-import { cliInputValidate } from "./cliInputValidate.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 
-const fileUploadFlagsSchema = a.object({
-  type: cliOptionSchemas.nonEmptyString,
-  filename: cliOptionSchemas.nonEmptyString,
-  contentType: a.optional(cliOptionSchemas.string),
-  path: cliOptionSchemas.nonEmptyString,
-})
+const filePathSchema = cliOptionSchemas.nonEmptyString
+const fileOutputSchema = cliOptionSchemas.nonEmptyString
 
-const fileUploadInputSchema = a.object({
-  type: cliOptionSchemas.nonEmptyString,
-  filename: cliOptionSchemas.nonEmptyString,
-  contentType: a.optional(cliOptionSchemas.string),
-  data: a.instance(Uint8Array),
+const fileUploadFlagsSchema = a.object({
+  type: fileTypeSchema,
+  filename: fileFilenameSchema,
+  contentType: a.optional(fileContentTypeSchema),
+  path: filePathSchema,
 })
 
 type FileUploadFlags = CliClientInput & a.InferOutput<typeof fileUploadFlagsSchema>
 
-const fileDownloadInputSchema = a.object({
-  id: cliOptionSchemas.id,
-  output: a.optional(cliOptionSchemas.nonEmptyString),
-})
+const fileDownloadFlagsSchema = a.intersect([
+  fileDownloadInputSchema,
+  a.object({
+    output: a.optional(fileOutputSchema),
+  }),
+])
 
-type FileDownloadFlags = CliClientInput & a.InferOutput<typeof fileDownloadInputSchema>
+type FileDownloadFlags = CliClientInput & a.InferOutput<typeof fileDownloadFlagsSchema>
 
 const fileUploadOptions = {
-  type: cliOptionCreate(cliOptionSchemas.nonEmptyString, "File type"),
-  filename: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Uploaded filename"),
-  contentType: cliOptionCreate(cliOptionSchemas.string, "File content type", { optional: true }),
-  path: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Path to the file to upload"),
+  type: cliOptionCreate(fileTypeSchema, "File type"),
+  filename: cliOptionCreate(fileFilenameSchema, "Uploaded filename"),
+  contentType: cliOptionCreate(fileContentTypeSchema, "File content type", { optional: true }),
+  path: cliOptionCreate(filePathSchema, "Path to the file to upload"),
 }
 
 const fileDownloadOptions = {
-  id: cliOptionCreate(cliOptionSchemas.id, "File ID"),
-  output: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Path to write the downloaded file", { optional: true }),
+  id: cliOptionCreate(cliOptionSchemas.string, "File ID"),
+  output: cliOptionCreate(fileOutputSchema, "Path to write the downloaded file", { optional: true }),
 }
 
 const fileUploadCommand = buildCommand({
@@ -70,19 +73,12 @@ const fileUploadCommand = buildCommand({
           )
         }
 
-        const uploadInputResult = cliInputValidate(
-          fileUploadInputSchema,
-          {
-            type: input.type,
-            filename: input.filename,
-            contentType: input.contentType,
-            data,
-          },
-          "fileUpload",
-        )
-        if (!uploadInputResult.success) return uploadInputResult
-
-        return fileUpload(client, uploadInputResult.data)
+        return fileUpload(client, {
+          type: input.type,
+          filename: input.filename,
+          contentType: input.contentType,
+          data,
+        })
       },
       op: "fileUpload",
     })
@@ -103,7 +99,7 @@ const fileDownloadCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id, output: flags.output },
-      inputSchema: fileDownloadInputSchema,
+      inputSchema: fileDownloadFlagsSchema,
       execute: async (client, input) => {
         const downloadResult = await fileDownload(client, input.id)
         if (!downloadResult.success) return downloadResult

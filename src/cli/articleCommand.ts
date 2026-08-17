@@ -4,7 +4,9 @@ import { articleCreate } from "../article/articleCreate.js"
 import { articleDelete } from "../article/articleDelete.js"
 import { articleGet } from "../article/articleGet.js"
 import { articleList } from "../article/articleList.js"
+import { articleBodySchema, articleListInputSchema, articlePriceSchema } from "../article/articleSchemas.js"
 import { articleUpdate } from "../article/articleUpdate.js"
+import { lexwareIdInputSchema } from "../shared/lexwareSchemas.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
@@ -12,62 +14,57 @@ import { cliCommandExecute } from "./cliCommandExecute.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 
-const articleListInputSchema = a.object({
-  page: a.optional(a.number()),
-  type: a.optional(a.picklist(["PRODUCT", "SERVICE"])),
-})
 type ArticleListFlags = CliClientInput & a.InferOutput<typeof articleListInputSchema>
 
-const articleIdInputSchema = a.object({ id: cliOptionSchemas.id })
-type ArticleIdFlags = CliClientInput & a.InferOutput<typeof articleIdInputSchema>
-
-const articlePriceInputSchema = a.object({
-  leadingPrice: a.picklist(["NET", "GROSS"]),
-  netPrice: a.optional(a.number()),
-  grossPrice: a.optional(a.number()),
-  taxRate: a.optional(a.number()),
-})
-
-const articleBodyInputSchema = a.object({
-  title: a.optional(a.string()),
-  description: a.optional(a.string()),
-  type: a.picklist(["PRODUCT", "SERVICE"]),
-  articleNumber: a.optional(a.string()),
-  gtin: a.optional(a.string()),
-  note: a.optional(a.string()),
-  unitName: a.optional(a.string()),
-  version: a.optional(a.number()),
-  price: a.optional(articlePriceInputSchema),
-})
-
-type ArticlePriceFlags = {
-  readonly leadingPrice?: "NET" | "GROSS"
-  readonly netPrice?: number
-  readonly grossPrice?: number
-  readonly taxRate?: number
+type ArticleIdFlags = CliClientInput & a.InferOutput<typeof lexwareIdInputSchema>
+type ArticleBodyFlags = CliClientInput & {
+  readonly title?: a.InferOutput<typeof articleBodySchema.entries.title>
+  readonly description?: a.InferOutput<typeof articleBodySchema.entries.description>
+  readonly type: a.InferOutput<typeof articleBodySchema.entries.type>
+  readonly articleNumber?: a.InferOutput<typeof articleBodySchema.entries.articleNumber>
+  readonly gtin?: a.InferOutput<typeof articleBodySchema.entries.gtin>
+  readonly note?: a.InferOutput<typeof articleBodySchema.entries.note>
+  readonly unitName?: a.InferOutput<typeof articleBodySchema.entries.unitName>
+  readonly version?: a.InferOutput<typeof articleBodySchema.entries.version>
+  readonly leadingPrice?: a.InferOutput<typeof articlePriceSchema.entries.leadingPrice>
+  readonly netPrice?: a.InferOutput<typeof articlePriceSchema.entries.netPrice>
+  readonly grossPrice?: a.InferOutput<typeof articlePriceSchema.entries.grossPrice>
+  readonly taxRate?: a.InferOutput<typeof articlePriceSchema.entries.taxRate>
 }
-type ArticleBodyFlags = CliClientInput & Omit<a.InferOutput<typeof articleBodyInputSchema>, "price"> & ArticlePriceFlags
-type ArticleUpdateFlags = ArticleBodyFlags & a.InferOutput<typeof articleIdInputSchema>
+type ArticleUpdateFlags = ArticleBodyFlags & a.InferOutput<typeof lexwareIdInputSchema>
 
 const articleBodyOptions = {
-  title: cliOptionCreate(cliOptionSchemas.string, "Article title", { optional: true }),
-  description: cliOptionCreate(cliOptionSchemas.string, "Article description", { optional: true }),
-  type: cliOptionCreate(a.picklist(["PRODUCT", "SERVICE"]), "Article type"),
-  articleNumber: cliOptionCreate(cliOptionSchemas.string, "Article number", { optional: true }),
-  gtin: cliOptionCreate(cliOptionSchemas.string, "Global Trade Item Number", { optional: true }),
-  note: cliOptionCreate(cliOptionSchemas.string, "Article note", { optional: true }),
-  unitName: cliOptionCreate(cliOptionSchemas.string, "Article unit name", { optional: true }),
-  version: cliOptionCreate(cliOptionSchemas.number, "Article version", { optional: true }),
-  leadingPrice: cliOptionCreate(a.picklist(["NET", "GROSS"]), "Leading price", { optional: true }),
-  netPrice: cliOptionCreate(cliOptionSchemas.number, "Net price", { optional: true }),
-  grossPrice: cliOptionCreate(cliOptionSchemas.number, "Gross price", { optional: true }),
-  taxRate: cliOptionCreate(cliOptionSchemas.number, "Tax rate", { optional: true }),
+  title: cliOptionCreate(a.unwrap(articleBodySchema.entries.title), "Article title", { optional: true }),
+  description: cliOptionCreate(a.unwrap(articleBodySchema.entries.description), "Article description", {
+    optional: true,
+  }),
+  type: cliOptionCreate(articleBodySchema.entries.type, "Article type"),
+  articleNumber: cliOptionCreate(a.unwrap(articleBodySchema.entries.articleNumber), "Article number", {
+    optional: true,
+  }),
+  gtin: cliOptionCreate(a.unwrap(articleBodySchema.entries.gtin), "Global Trade Item Number", { optional: true }),
+  note: cliOptionCreate(a.unwrap(articleBodySchema.entries.note), "Article note", { optional: true }),
+  unitName: cliOptionCreate(a.unwrap(articleBodySchema.entries.unitName), "Article unit name", { optional: true }),
+  version: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(articleBodySchema.entries.version)),
+    "Article version",
+    { optional: true },
+  ),
+  leadingPrice: cliOptionCreate(articlePriceSchema.entries.leadingPrice, "Leading price", { optional: true }),
+  netPrice: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(articlePriceSchema.entries.netPrice)),
+    "Net price",
+    { optional: true },
+  ),
+  grossPrice: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(articlePriceSchema.entries.grossPrice)),
+    "Gross price",
+    { optional: true },
+  ),
+  taxRate: cliOptionCreate(a.pipe(cliOptionSchemas.number, a.unwrap(articlePriceSchema.entries.taxRate)), "Tax rate", {
+    optional: true,
+  }),
 }
-
-const articleUpdateInputSchema = a.object({
-  id: cliOptionSchemas.id,
-  body: articleBodyInputSchema,
-})
 
 function articleBodyInputFromFlags(flags: ArticleBodyFlags): unknown {
   const hasPrice =
@@ -101,7 +98,7 @@ const articleCreateCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: articleBodyInputFromFlags(flags),
-      inputSchema: articleBodyInputSchema,
+      inputSchema: articleBodySchema,
       execute: articleCreate,
       op: "articleCreate",
     })
@@ -121,16 +118,16 @@ const articleUpdateCommand = buildCommand({
   func(this: CliCommandContext, flags: ArticleUpdateFlags) {
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
-      input: { id: flags.id, body: articleBodyInputFromFlags(flags) },
-      inputSchema: articleUpdateInputSchema,
-      execute: (client, input) => articleUpdate(client, input.id, input.body),
+      input: articleBodyInputFromFlags(flags),
+      inputSchema: articleBodySchema,
+      execute: (client, input) => articleUpdate(client, flags.id, input),
       op: "articleUpdate",
     })
   },
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Article ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Article ID"),
       ...articleBodyOptions,
     },
   },
@@ -152,8 +149,12 @@ const articleListCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      page: cliOptionCreate(cliOptionSchemas.integer, "Page number", { optional: true }),
-      type: cliOptionCreate(a.picklist(["PRODUCT", "SERVICE"]), "Article type", { optional: true }),
+      page: cliOptionCreate(
+        a.pipe(cliOptionSchemas.integer, a.unwrap(articleListInputSchema.entries.page)),
+        "Page number",
+        { optional: true },
+      ),
+      type: cliOptionCreate(a.unwrap(articleListInputSchema.entries.type), "Article type", { optional: true }),
     },
   },
   docs: {
@@ -166,7 +167,7 @@ const articleGetCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: articleIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => articleGet(client, input.id),
       op: "articleGet",
     })
@@ -174,7 +175,7 @@ const articleGetCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Article ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Article ID"),
     },
   },
   docs: {
@@ -187,7 +188,7 @@ const articleDeleteCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: articleIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => articleDelete(client, input.id),
       op: "articleDelete",
     })
@@ -195,7 +196,7 @@ const articleDeleteCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Article ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Article ID"),
     },
   },
   docs: {

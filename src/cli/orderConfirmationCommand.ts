@@ -1,10 +1,14 @@
 import { buildCommand, buildRouteMap } from "@stricli/core"
-import * as a from "valibot"
 import { orderConfirmationCreate } from "../orderConfirmation/orderConfirmationCreate.js"
 import { orderConfirmationDelete } from "../orderConfirmation/orderConfirmationDelete.js"
 import { orderConfirmationGet } from "../orderConfirmation/orderConfirmationGet.js"
 import { orderConfirmationList } from "../orderConfirmation/orderConfirmationList.js"
-import { orderConfirmationBodySchema } from "../orderConfirmation/orderConfirmationSchemas.js"
+import {
+  type OrderConfirmationListInput,
+  orderConfirmationBodySchema,
+  orderConfirmationListInputSchema,
+} from "../orderConfirmation/orderConfirmationSchemas.js"
+import { lexwareIdInputSchema } from "../shared/lexwareSchemas.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
@@ -12,13 +16,8 @@ import { cliCommandExecute } from "./cliCommandExecute.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 
-const orderConfirmationListInputSchema = a.object({
-  page: a.optional(a.number()),
-})
-type OrderConfirmationListFlags = CliClientInput & a.InferOutput<typeof orderConfirmationListInputSchema>
-
-const orderConfirmationIdInputSchema = a.object({ id: cliOptionSchemas.id })
-type OrderConfirmationIdFlags = CliClientInput & a.InferOutput<typeof orderConfirmationIdInputSchema>
+type OrderConfirmationListFlags = CliClientInput & OrderConfirmationListInput
+type OrderConfirmationIdFlags = CliClientInput & { id: string }
 
 type OrderConfirmationCreateFlags = CliClientInput
 
@@ -70,7 +69,7 @@ const orderConfirmationGetCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: orderConfirmationIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => orderConfirmationGet(client, input.id),
       op: "orderConfirmationGet",
     })
@@ -78,7 +77,7 @@ const orderConfirmationGetCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Order confirmation ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Order confirmation ID"),
     },
   },
   docs: {
@@ -91,7 +90,7 @@ const orderConfirmationDeleteCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: orderConfirmationIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => orderConfirmationDelete(client, input.id),
       op: "orderConfirmationDelete",
     })
@@ -99,7 +98,7 @@ const orderConfirmationDeleteCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Order confirmation ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Order confirmation ID"),
     },
   },
   docs: {

@@ -5,7 +5,24 @@ import { contactDelete } from "../contact/contactDelete.js"
 import { contactGet } from "../contact/contactGet.js"
 import { contactList } from "../contact/contactList.js"
 import { contactPersonCreate } from "../contact/contactPersonCreate.js"
+import {
+  contactAddressSchema,
+  contactBodySchema,
+  contactCompanyContactPersonSchema,
+  contactCompanyCreateInputSchema,
+  contactCompanySchema,
+  contactEmailAddressSchema,
+  contactListInputSchema,
+  contactNoteSchema,
+  contactPersonCreateInputSchema,
+  contactPersonSchema,
+  contactPhoneNumberSchema,
+  contactUpdateInputSchema,
+  contactXRechnungBuyerReferenceSchema,
+  contactXRechnungVendorNumberAtCustomerSchema,
+} from "../contact/contactSchemas.js"
 import { contactUpdate } from "../contact/contactUpdate.js"
+import { lexwareIdInputSchema } from "../shared/lexwareSchemas.js"
 import type { CliClientInput } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
@@ -13,264 +30,218 @@ import { cliCommandExecute } from "./cliCommandExecute.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 
-const contactRoleSchema = a.pipe(
-  a.object({
-    customer: a.optional(a.object({})),
-    vendor: a.optional(a.object({})),
-  }),
-  a.check(
-    (input) => input.customer !== undefined || input.vendor !== undefined,
-    "At least one contact role is required",
-  ),
-)
-
-const contactCompanyContactPersonSchema = a.object({
-  salutation: a.optional(a.string()),
-  firstName: a.optional(a.string()),
-  lastName: cliOptionSchemas.nonEmptyString,
-  primary: a.optional(a.boolean()),
-  emailAddress: a.optional(a.string()),
-  phoneNumber: a.optional(a.string()),
-})
-
-const contactCompanySchema = a.object({
-  name: cliOptionSchemas.nonEmptyString,
-  taxNumber: a.optional(a.string()),
-  vatRegistrationId: a.optional(a.string()),
-  allowTaxFreeInvoices: a.optional(a.boolean()),
-  contactPersons: a.optional(a.pipe(a.array(contactCompanyContactPersonSchema), a.maxLength(1))),
-})
-
-const contactPersonSchema = a.object({
-  salutation: a.optional(a.string()),
-  firstName: cliOptionSchemas.nonEmptyString,
-  lastName: cliOptionSchemas.nonEmptyString,
-})
-
-const contactAddressSchema = a.object({
-  supplement: a.optional(a.string()),
-  street: a.optional(a.string()),
-  zip: a.optional(a.string()),
-  city: a.optional(a.string()),
-  countryCode: cliOptionSchemas.nonEmptyString,
-})
-
-const contactAddressesSchema = a.object({
-  billing: a.optional(a.pipe(a.array(contactAddressSchema), a.maxLength(1))),
-  shipping: a.optional(a.pipe(a.array(contactAddressSchema), a.maxLength(1))),
-})
-
-const contactXRechnungSchema = a.pipe(
-  a.object({
-    buyerReference: a.optional(a.string()),
-    vendorNumberAtCustomer: a.optional(a.string()),
-  }),
-  a.check(
-    (input) =>
-      (input.buyerReference === undefined && input.vendorNumberAtCustomer === undefined) ||
-      (input.buyerReference !== undefined && input.vendorNumberAtCustomer !== undefined),
-    "XRechnung buyer reference and vendor number must be provided together",
-  ),
-)
-
-const contactEmailAddressesSchema = a.object({
-  business: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  office: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  private: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  other: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-})
-
-const contactPhoneNumbersSchema = a.object({
-  business: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  office: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  mobile: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  private: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  fax: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-  other: a.optional(a.pipe(a.array(a.string()), a.maxLength(1))),
-})
-
-const contactInputEntries = {
-  roles: contactRoleSchema,
-  company: a.optional(contactCompanySchema),
-  person: a.optional(contactPersonSchema),
-  addresses: a.optional(contactAddressesSchema),
-  xRechnung: a.optional(contactXRechnungSchema),
-  emailAddresses: a.optional(contactEmailAddressesSchema),
-  phoneNumbers: a.optional(contactPhoneNumbersSchema),
-  note: a.optional(a.pipe(a.string(), a.maxLength(1000))),
-  archived: a.optional(a.boolean()),
-  version: a.optional(a.number()),
-} as const
-
-const contactCompanyCreateInputSchema = a.object({
-  ...contactInputEntries,
-  company: contactCompanySchema,
-})
-
-const contactPersonCreateInputSchema = a.object({
-  ...contactInputEntries,
-  person: contactPersonSchema,
-})
-
-const contactUpdateBodySchema = a.pipe(
-  a.object(contactInputEntries),
-  a.check(
-    (input) =>
-      (input.company === undefined && input.person !== undefined) ||
-      (input.company !== undefined && input.person === undefined),
-    "Exactly one company or person contact must be provided",
-  ),
-)
-
-const contactUpdateInputSchema = a.object({
-  id: cliOptionSchemas.id,
-  body: contactUpdateBodySchema,
-})
-
 type ContactCommonFlags = CliClientInput & {
-  readonly customer?: boolean
-  readonly vendor?: boolean
-  readonly billingSupplement?: string
-  readonly billingStreet?: string
-  readonly billingZip?: string
-  readonly billingCity?: string
-  readonly billingCountryCode?: string
-  readonly shippingSupplement?: string
-  readonly shippingStreet?: string
-  readonly shippingZip?: string
-  readonly shippingCity?: string
-  readonly shippingCountryCode?: string
-  readonly xRechnungBuyerReference?: string
-  readonly xRechnungVendorNumberAtCustomer?: string
-  readonly emailBusiness?: string
-  readonly emailOffice?: string
-  readonly emailPrivate?: string
-  readonly emailOther?: string
-  readonly phoneBusiness?: string
-  readonly phoneOffice?: string
-  readonly phoneMobile?: string
-  readonly phonePrivate?: string
-  readonly phoneFax?: string
-  readonly phoneOther?: string
-  readonly note?: string
-  readonly archived?: boolean
-  readonly version?: number
+  readonly customer?: a.InferOutput<typeof cliOptionSchemas.boolean>
+  readonly vendor?: a.InferOutput<typeof cliOptionSchemas.boolean>
+  readonly billingSupplement?: a.InferOutput<typeof contactAddressSchema.entries.supplement>
+  readonly billingStreet?: a.InferOutput<typeof contactAddressSchema.entries.street>
+  readonly billingZip?: a.InferOutput<typeof contactAddressSchema.entries.zip>
+  readonly billingCity?: a.InferOutput<typeof contactAddressSchema.entries.city>
+  readonly billingCountryCode?: a.InferOutput<typeof contactAddressSchema.entries.countryCode>
+  readonly shippingSupplement?: a.InferOutput<typeof contactAddressSchema.entries.supplement>
+  readonly shippingStreet?: a.InferOutput<typeof contactAddressSchema.entries.street>
+  readonly shippingZip?: a.InferOutput<typeof contactAddressSchema.entries.zip>
+  readonly shippingCity?: a.InferOutput<typeof contactAddressSchema.entries.city>
+  readonly shippingCountryCode?: a.InferOutput<typeof contactAddressSchema.entries.countryCode>
+  readonly xRechnungBuyerReference?: a.InferOutput<typeof contactXRechnungBuyerReferenceSchema>
+  readonly xRechnungVendorNumberAtCustomer?: a.InferOutput<typeof contactXRechnungVendorNumberAtCustomerSchema>
+  readonly emailBusiness?: a.InferOutput<typeof contactEmailAddressSchema>
+  readonly emailOffice?: a.InferOutput<typeof contactEmailAddressSchema>
+  readonly emailPrivate?: a.InferOutput<typeof contactEmailAddressSchema>
+  readonly emailOther?: a.InferOutput<typeof contactEmailAddressSchema>
+  readonly phoneBusiness?: a.InferOutput<typeof contactPhoneNumberSchema>
+  readonly phoneOffice?: a.InferOutput<typeof contactPhoneNumberSchema>
+  readonly phoneMobile?: a.InferOutput<typeof contactPhoneNumberSchema>
+  readonly phonePrivate?: a.InferOutput<typeof contactPhoneNumberSchema>
+  readonly phoneFax?: a.InferOutput<typeof contactPhoneNumberSchema>
+  readonly phoneOther?: a.InferOutput<typeof contactPhoneNumberSchema>
+  readonly note?: a.InferOutput<typeof contactNoteSchema>
+  readonly archived?: a.InferOutput<typeof contactBodySchema.entries.archived>
+  readonly version?: a.InferOutput<typeof contactBodySchema.entries.version>
 }
 
 type ContactCompanyFields = {
-  readonly companyName?: string
-  readonly companyTaxNumber?: string
-  readonly companyVatRegistrationId?: string
-  readonly companyAllowTaxFreeInvoices?: boolean
-  readonly contactPersonSalutation?: string
-  readonly contactPersonFirstName?: string
-  readonly contactPersonLastName?: string
-  readonly contactPersonPrimary?: boolean
-  readonly contactPersonEmailAddress?: string
-  readonly contactPersonPhoneNumber?: string
+  readonly companyName?: a.InferOutput<typeof contactCompanySchema.entries.name>
+  readonly companyTaxNumber?: a.InferOutput<typeof contactCompanySchema.entries.taxNumber>
+  readonly companyVatRegistrationId?: a.InferOutput<typeof contactCompanySchema.entries.vatRegistrationId>
+  readonly companyAllowTaxFreeInvoices?: a.InferOutput<typeof contactCompanySchema.entries.allowTaxFreeInvoices>
+  readonly contactPersonSalutation?: a.InferOutput<typeof contactCompanyContactPersonSchema.entries.salutation>
+  readonly contactPersonFirstName?: a.InferOutput<typeof contactCompanyContactPersonSchema.entries.firstName>
+  readonly contactPersonLastName?: a.InferOutput<typeof contactCompanyContactPersonSchema.entries.lastName>
+  readonly contactPersonPrimary?: a.InferOutput<typeof contactCompanyContactPersonSchema.entries.primary>
+  readonly contactPersonEmailAddress?: a.InferOutput<typeof contactCompanyContactPersonSchema.entries.emailAddress>
+  readonly contactPersonPhoneNumber?: a.InferOutput<typeof contactCompanyContactPersonSchema.entries.phoneNumber>
 }
 
 type ContactPersonFields = {
-  readonly personSalutation?: string
-  readonly personFirstName?: string
-  readonly personLastName?: string
+  readonly personSalutation?: a.InferOutput<typeof contactPersonSchema.entries.salutation>
+  readonly personFirstName?: a.InferOutput<typeof contactPersonSchema.entries.firstName>
+  readonly personLastName?: a.InferOutput<typeof contactPersonSchema.entries.lastName>
 }
 
 type ContactBodyFlags = ContactCommonFlags & ContactCompanyFields & ContactPersonFields
 
+type ContactBodyInputOptions = {
+  readonly omitEmptyRoles?: boolean
+}
+
 type ContactCompanyCreateFlags = ContactCommonFlags &
   ContactCompanyFields & {
-    readonly companyName: string
+    readonly companyName: a.InferOutput<typeof contactCompanySchema.entries.name>
   }
 
 type ContactPersonCreateFlags = ContactCommonFlags &
   ContactPersonFields & {
-    readonly personFirstName: string
-    readonly personLastName: string
+    readonly personFirstName: a.InferOutput<typeof contactPersonSchema.entries.firstName>
+    readonly personLastName: a.InferOutput<typeof contactPersonSchema.entries.lastName>
   }
 
 type ContactUpdateFlags = ContactCommonFlags &
   ContactCompanyFields &
   ContactPersonFields & {
-    readonly id: string
+    readonly id: a.InferOutput<typeof lexwareIdInputSchema.entries.id>
   }
 
 const contactCommonOptions = {
   customer: cliOptionCreate(cliOptionSchemas.boolean, "Add the customer role", { optional: true }),
   vendor: cliOptionCreate(cliOptionSchemas.boolean, "Add the vendor role", { optional: true }),
-  billingSupplement: cliOptionCreate(cliOptionSchemas.string, "Billing address supplement", { optional: true }),
-  billingStreet: cliOptionCreate(cliOptionSchemas.string, "Billing street and number", { optional: true }),
-  billingZip: cliOptionCreate(cliOptionSchemas.string, "Billing postal code", { optional: true }),
-  billingCity: cliOptionCreate(cliOptionSchemas.string, "Billing city", { optional: true }),
-  billingCountryCode: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Billing ISO 3166 alpha-2 country code", {
+  billingSupplement: cliOptionCreate(a.unwrap(contactAddressSchema.entries.supplement), "Billing address supplement", {
     optional: true,
   }),
-  shippingSupplement: cliOptionCreate(cliOptionSchemas.string, "Shipping address supplement", { optional: true }),
-  shippingStreet: cliOptionCreate(cliOptionSchemas.string, "Shipping street and number", { optional: true }),
-  shippingZip: cliOptionCreate(cliOptionSchemas.string, "Shipping postal code", { optional: true }),
-  shippingCity: cliOptionCreate(cliOptionSchemas.string, "Shipping city", { optional: true }),
-  shippingCountryCode: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Shipping ISO 3166 alpha-2 country code", {
+  billingStreet: cliOptionCreate(a.unwrap(contactAddressSchema.entries.street), "Billing street and number", {
     optional: true,
   }),
-  xRechnungBuyerReference: cliOptionCreate(cliOptionSchemas.string, "XRechnung buyer reference", { optional: true }),
-  xRechnungVendorNumberAtCustomer: cliOptionCreate(cliOptionSchemas.string, "Vendor number at customer", {
+  billingZip: cliOptionCreate(a.unwrap(contactAddressSchema.entries.zip), "Billing postal code", { optional: true }),
+  billingCity: cliOptionCreate(a.unwrap(contactAddressSchema.entries.city), "Billing city", { optional: true }),
+  billingCountryCode: cliOptionCreate(
+    contactAddressSchema.entries.countryCode,
+    "Billing ISO 3166 alpha-2 country code",
+    {
+      optional: true,
+    },
+  ),
+  shippingSupplement: cliOptionCreate(
+    a.unwrap(contactAddressSchema.entries.supplement),
+    "Shipping address supplement",
+    { optional: true },
+  ),
+  shippingStreet: cliOptionCreate(a.unwrap(contactAddressSchema.entries.street), "Shipping street and number", {
     optional: true,
   }),
-  emailBusiness: cliOptionCreate(cliOptionSchemas.string, "Business email address", { optional: true }),
-  emailOffice: cliOptionCreate(cliOptionSchemas.string, "Office email address", { optional: true }),
-  emailPrivate: cliOptionCreate(cliOptionSchemas.string, "Private email address", { optional: true }),
-  emailOther: cliOptionCreate(cliOptionSchemas.string, "Other email address", { optional: true }),
-  phoneBusiness: cliOptionCreate(cliOptionSchemas.string, "Business phone number", { optional: true }),
-  phoneOffice: cliOptionCreate(cliOptionSchemas.string, "Office phone number", { optional: true }),
-  phoneMobile: cliOptionCreate(cliOptionSchemas.string, "Mobile phone number", { optional: true }),
-  phonePrivate: cliOptionCreate(cliOptionSchemas.string, "Private phone number", { optional: true }),
-  phoneFax: cliOptionCreate(cliOptionSchemas.string, "Fax number", { optional: true }),
-  phoneOther: cliOptionCreate(cliOptionSchemas.string, "Other phone number", { optional: true }),
-  note: cliOptionCreate(cliOptionSchemas.string, "Contact note", { optional: true }),
-  archived: cliOptionCreate(cliOptionSchemas.boolean, "Archived contact flag", { optional: true }),
-  version: cliOptionCreate(cliOptionSchemas.integer, "Contact version", { optional: true }),
+  shippingZip: cliOptionCreate(a.unwrap(contactAddressSchema.entries.zip), "Shipping postal code", { optional: true }),
+  shippingCity: cliOptionCreate(a.unwrap(contactAddressSchema.entries.city), "Shipping city", { optional: true }),
+  shippingCountryCode: cliOptionCreate(
+    contactAddressSchema.entries.countryCode,
+    "Shipping ISO 3166 alpha-2 country code",
+    {
+      optional: true,
+    },
+  ),
+  xRechnungBuyerReference: cliOptionCreate(contactXRechnungBuyerReferenceSchema, "XRechnung buyer reference", {
+    optional: true,
+  }),
+  xRechnungVendorNumberAtCustomer: cliOptionCreate(
+    contactXRechnungVendorNumberAtCustomerSchema,
+    "Vendor number at customer",
+    { optional: true },
+  ),
+  emailBusiness: cliOptionCreate(contactEmailAddressSchema, "Business email address", { optional: true }),
+  emailOffice: cliOptionCreate(contactEmailAddressSchema, "Office email address", { optional: true }),
+  emailPrivate: cliOptionCreate(contactEmailAddressSchema, "Private email address", { optional: true }),
+  emailOther: cliOptionCreate(contactEmailAddressSchema, "Other email address", { optional: true }),
+  phoneBusiness: cliOptionCreate(contactPhoneNumberSchema, "Business phone number", { optional: true }),
+  phoneOffice: cliOptionCreate(contactPhoneNumberSchema, "Office phone number", { optional: true }),
+  phoneMobile: cliOptionCreate(contactPhoneNumberSchema, "Mobile phone number", { optional: true }),
+  phonePrivate: cliOptionCreate(contactPhoneNumberSchema, "Private phone number", { optional: true }),
+  phoneFax: cliOptionCreate(contactPhoneNumberSchema, "Fax number", { optional: true }),
+  phoneOther: cliOptionCreate(contactPhoneNumberSchema, "Other phone number", { optional: true }),
+  note: cliOptionCreate(contactNoteSchema, "Contact note", { optional: true }),
+  archived: cliOptionCreate(
+    a.pipe(cliOptionSchemas.boolean, a.unwrap(contactBodySchema.entries.archived)),
+    "Archived contact flag",
+    { optional: true },
+  ),
+  version: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, a.unwrap(contactBodySchema.entries.version)),
+    "Contact version",
+    { optional: true },
+  ),
 } as const
 
 const contactCompanyOptions = {
-  companyName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Company name"),
-  companyTaxNumber: cliOptionCreate(cliOptionSchemas.string, "Company tax number", { optional: true }),
-  companyVatRegistrationId: cliOptionCreate(cliOptionSchemas.string, "Company VAT registration ID", { optional: true }),
-  companyAllowTaxFreeInvoices: cliOptionCreate(cliOptionSchemas.boolean, "Allow tax-free invoices", { optional: true }),
-  contactPersonSalutation: cliOptionCreate(cliOptionSchemas.string, "Company contact person salutation", {
+  companyName: cliOptionCreate(contactCompanySchema.entries.name, "Company name"),
+  companyTaxNumber: cliOptionCreate(a.unwrap(contactCompanySchema.entries.taxNumber), "Company tax number", {
     optional: true,
   }),
-  contactPersonFirstName: cliOptionCreate(cliOptionSchemas.string, "Company contact person first name", {
-    optional: true,
-  }),
-  contactPersonLastName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Company contact person last name", {
-    optional: true,
-  }),
-  contactPersonPrimary: cliOptionCreate(cliOptionSchemas.boolean, "Company contact person is primary", {
-    optional: true,
-  }),
-  contactPersonEmailAddress: cliOptionCreate(cliOptionSchemas.string, "Company contact person email address", {
-    optional: true,
-  }),
-  contactPersonPhoneNumber: cliOptionCreate(cliOptionSchemas.string, "Company contact person phone number", {
-    optional: true,
-  }),
+  companyVatRegistrationId: cliOptionCreate(
+    a.unwrap(contactCompanySchema.entries.vatRegistrationId),
+    "Company VAT registration ID",
+    { optional: true },
+  ),
+  companyAllowTaxFreeInvoices: cliOptionCreate(
+    a.pipe(cliOptionSchemas.boolean, a.unwrap(contactCompanySchema.entries.allowTaxFreeInvoices)),
+    "Allow tax-free invoices",
+    { optional: true },
+  ),
+  contactPersonSalutation: cliOptionCreate(
+    a.unwrap(contactCompanyContactPersonSchema.entries.salutation),
+    "Company contact person salutation",
+    { optional: true },
+  ),
+  contactPersonFirstName: cliOptionCreate(
+    a.unwrap(contactCompanyContactPersonSchema.entries.firstName),
+    "Company contact person first name",
+    {
+      optional: true,
+    },
+  ),
+  contactPersonLastName: cliOptionCreate(
+    contactCompanyContactPersonSchema.entries.lastName,
+    "Company contact person last name",
+    {
+      optional: true,
+    },
+  ),
+  contactPersonPrimary: cliOptionCreate(
+    a.pipe(cliOptionSchemas.boolean, a.unwrap(contactCompanyContactPersonSchema.entries.primary)),
+    "Company contact person is primary",
+    {
+      optional: true,
+    },
+  ),
+  contactPersonEmailAddress: cliOptionCreate(
+    a.unwrap(contactCompanyContactPersonSchema.entries.emailAddress),
+    "Company contact person email address",
+    {
+      optional: true,
+    },
+  ),
+  contactPersonPhoneNumber: cliOptionCreate(
+    a.unwrap(contactCompanyContactPersonSchema.entries.phoneNumber),
+    "Company contact person phone number",
+    {
+      optional: true,
+    },
+  ),
 } as const
 
 const contactPersonOptions = {
-  personSalutation: cliOptionCreate(cliOptionSchemas.string, "Person salutation", { optional: true }),
-  personFirstName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Person first name", { optional: true }),
-  personLastName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Person last name", { optional: true }),
+  personSalutation: cliOptionCreate(a.unwrap(contactPersonSchema.entries.salutation), "Person salutation", {
+    optional: true,
+  }),
+  personFirstName: cliOptionCreate(contactPersonSchema.entries.firstName, "Person first name", { optional: true }),
+  personLastName: cliOptionCreate(contactPersonSchema.entries.lastName, "Person last name", { optional: true }),
 } as const
 
 const contactCompanyUpdateOptions = {
   ...contactCompanyOptions,
-  companyName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Company name", { optional: true }),
+  companyName: cliOptionCreate(contactCompanySchema.entries.name, "Company name", { optional: true }),
 } as const
 
 const contactPersonCreateOptions = {
   ...contactPersonOptions,
-  personFirstName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Person first name"),
-  personLastName: cliOptionCreate(cliOptionSchemas.nonEmptyString, "Person last name"),
+  personFirstName: cliOptionCreate(contactPersonSchema.entries.firstName, "Person first name"),
+  personLastName: cliOptionCreate(contactPersonSchema.entries.lastName, "Person last name"),
 } as const
 
 function contactAddressFromFlags(
@@ -334,7 +305,7 @@ function contactCompanyContactPersonFromFlags(flags: ContactBodyFlags):
   ]
 }
 
-function contactBodyInputFromFlags(flags: ContactBodyFlags): unknown {
+function contactBodyInputFromFlags(flags: ContactBodyFlags, options: ContactBodyInputOptions = {}): unknown {
   const billing = contactAddressFromFlags(
     flags.billingSupplement,
     flags.billingStreet,
@@ -371,12 +342,16 @@ function contactBodyInputFromFlags(flags: ContactBodyFlags): unknown {
     flags.phonePrivate !== undefined ||
     flags.phoneFax !== undefined ||
     flags.phoneOther !== undefined
+  const hasRoles = flags.customer === true || flags.vendor === true
 
   return {
-    roles: {
-      customer: flags.customer === true ? {} : undefined,
-      vendor: flags.vendor === true ? {} : undefined,
-    },
+    roles:
+      options.omitEmptyRoles === true && !hasRoles
+        ? undefined
+        : {
+            customer: flags.customer === true ? {} : undefined,
+            vendor: flags.vendor === true ? {} : undefined,
+          },
     company: hasCompany
       ? {
           name: flags.companyName,
@@ -478,7 +453,7 @@ const contactUpdateCommand = buildCommand({
   func(this: CliCommandContext, flags: ContactUpdateFlags) {
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
-      input: { id: flags.id, body: contactBodyInputFromFlags(flags) },
+      input: { id: flags.id, body: contactBodyInputFromFlags(flags, { omitEmptyRoles: true }) },
       inputSchema: contactUpdateInputSchema,
       execute: (client, input) => contactUpdate(client, input.id, input.body),
       op: "contactUpdate",
@@ -487,7 +462,7 @@ const contactUpdateCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Contact ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Contact ID"),
       ...contactCommonOptions,
       ...contactCompanyUpdateOptions,
       ...contactPersonOptions,
@@ -498,27 +473,17 @@ const contactUpdateCommand = buildCommand({
   },
 })
 
-const contactListInputSchema = a.object({
-  page: a.optional(a.number()),
-  size: a.optional(a.number()),
-  filter_email: a.optional(a.string()),
-  filter_name: a.optional(a.string()),
-  filter_number: a.optional(a.string()),
-  filter_customer: a.optional(a.boolean()),
-  filter_vendor: a.optional(a.boolean()),
-})
 type ContactListFlags = CliClientInput & {
-  readonly page?: number
-  readonly size?: number
-  readonly filterEmail?: string
-  readonly filterName?: string
-  readonly filterNumber?: string
-  readonly filterCustomer?: boolean
-  readonly filterVendor?: boolean
+  readonly page?: a.InferOutput<typeof contactListInputSchema.entries.page>
+  readonly size?: a.InferOutput<typeof contactListInputSchema.entries.size>
+  readonly filterEmail?: a.InferOutput<typeof contactListInputSchema.entries.filter_email>
+  readonly filterName?: a.InferOutput<typeof contactListInputSchema.entries.filter_name>
+  readonly filterNumber?: a.InferOutput<typeof contactListInputSchema.entries.filter_number>
+  readonly filterCustomer?: a.InferOutput<typeof contactListInputSchema.entries.filter_customer>
+  readonly filterVendor?: a.InferOutput<typeof contactListInputSchema.entries.filter_vendor>
 }
 
-const contactIdInputSchema = a.object({ id: cliOptionSchemas.id })
-type ContactIdFlags = CliClientInput & a.InferOutput<typeof contactIdInputSchema>
+type ContactIdFlags = CliClientInput & a.InferOutput<typeof lexwareIdInputSchema>
 
 const contactListCommand = buildCommand({
   func(this: CliCommandContext, flags: ContactListFlags) {
@@ -541,13 +506,37 @@ const contactListCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      page: cliOptionCreate(cliOptionSchemas.integer, "Page number", { optional: true }),
-      size: cliOptionCreate(cliOptionSchemas.integer, "Page size", { optional: true }),
-      filterEmail: cliOptionCreate(cliOptionSchemas.string, "Filter by email", { optional: true }),
-      filterName: cliOptionCreate(cliOptionSchemas.string, "Filter by name", { optional: true }),
-      filterNumber: cliOptionCreate(cliOptionSchemas.string, "Filter by contact number", { optional: true }),
-      filterCustomer: cliOptionCreate(cliOptionSchemas.boolean, "Filter customer contacts", { optional: true }),
-      filterVendor: cliOptionCreate(cliOptionSchemas.boolean, "Filter vendor contacts", { optional: true }),
+      page: cliOptionCreate(
+        a.pipe(cliOptionSchemas.integer, a.unwrap(contactListInputSchema.entries.page)),
+        "Page number",
+        { optional: true },
+      ),
+      size: cliOptionCreate(
+        a.pipe(cliOptionSchemas.integer, a.unwrap(contactListInputSchema.entries.size)),
+        "Page size",
+        { optional: true },
+      ),
+      filterEmail: cliOptionCreate(a.unwrap(contactListInputSchema.entries.filter_email), "Filter by email", {
+        optional: true,
+      }),
+      filterName: cliOptionCreate(a.unwrap(contactListInputSchema.entries.filter_name), "Filter by name", {
+        optional: true,
+      }),
+      filterNumber: cliOptionCreate(
+        a.unwrap(contactListInputSchema.entries.filter_number),
+        "Filter by contact number",
+        { optional: true },
+      ),
+      filterCustomer: cliOptionCreate(
+        a.pipe(cliOptionSchemas.boolean, a.unwrap(contactListInputSchema.entries.filter_customer)),
+        "Filter customer contacts",
+        { optional: true },
+      ),
+      filterVendor: cliOptionCreate(
+        a.pipe(cliOptionSchemas.boolean, a.unwrap(contactListInputSchema.entries.filter_vendor)),
+        "Filter vendor contacts",
+        { optional: true },
+      ),
     },
   },
   docs: {
@@ -560,7 +549,7 @@ const contactGetCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: contactIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => contactGet(client, input.id),
       op: "contactGet",
     })
@@ -568,7 +557,7 @@ const contactGetCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Contact ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Contact ID"),
     },
   },
   docs: {
@@ -581,7 +570,7 @@ const contactDeleteCommand = buildCommand({
     return cliCommandExecute(this, {
       clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
       input: { id: flags.id },
-      inputSchema: contactIdInputSchema,
+      inputSchema: lexwareIdInputSchema,
       execute: (client, input) => contactDelete(client, input.id),
       op: "contactDelete",
     })
@@ -589,7 +578,7 @@ const contactDeleteCommand = buildCommand({
   parameters: {
     flags: {
       ...cliClientOptions,
-      id: cliOptionCreate(cliOptionSchemas.id, "Contact ID"),
+      id: cliOptionCreate(lexwareIdInputSchema.entries.id, "Contact ID"),
     },
   },
   docs: {

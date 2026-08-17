@@ -1,23 +1,22 @@
 import { buildCommand, buildRouteMap } from "@stricli/core"
-import * as a from "valibot"
 import { printLayoutList } from "../printLayout/printLayoutList.js"
-import type { CliClientInput } from "./cliClientCreate.js"
+import { type CliClientInput, cliClientCreate } from "./cliClientCreate.js"
 import { cliClientOptions } from "./cliClientOptions.js"
 import type { CliCommandContext } from "./cliCommandContext.js"
-import { cliCommandExecute } from "./cliCommandExecute.js"
+import { cliResultWrite } from "./cliResultWrite.js"
 
-const printLayoutListInputSchema = a.object({})
 type PrintLayoutListFlags = CliClientInput
 
 const printLayoutListCommand = buildCommand({
-  func(this: CliCommandContext, flags: PrintLayoutListFlags) {
-    return cliCommandExecute(this, {
-      clientInput: { accessToken: flags.accessToken, baseUrl: flags.baseUrl },
-      input: {},
-      inputSchema: printLayoutListInputSchema,
-      execute: (client) => printLayoutList(client),
-      op: "printLayoutList",
-    })
+  async func(this: CliCommandContext, flags: PrintLayoutListFlags) {
+    const clientResult = cliClientCreate(flags, this.process.env)
+    if (!clientResult.success) {
+      cliResultWrite(this.process, clientResult)
+      return
+    }
+
+    const result = await printLayoutList(clientResult.data)
+    cliResultWrite(this.process, result)
   },
   parameters: {
     flags: {

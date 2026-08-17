@@ -1,62 +1,111 @@
 import type { FlagParametersForType } from "@stricli/core"
 import * as a from "valibot"
+import {
+  dunningCurrencySchema,
+  dunningExtraLineItemAmountSchema,
+  dunningExtraLineItemDescriptionSchema,
+  dunningExtraLineItemDiscountPercentageSchema,
+  dunningExtraLineItemNameSchema,
+  dunningExtraLineItemQuantitySchema,
+  dunningExtraLineItemTypeSchema,
+  dunningExtraLineItemUnitNameSchema,
+  dunningExtraLineItemUnitPriceCurrencySchema,
+  dunningExtraLineItemUnitPriceGrossAmountSchema,
+  dunningExtraLineItemUnitPriceNetAmountSchema,
+  dunningExtraLineItemUnitPriceTaxRatePercentageSchema,
+  dunningFinalizeSchema,
+  dunningPrecedingSalesVoucherIdSchema,
+  dunningTitleSchema,
+  dunningTotalNetAmountSchema,
+  dunningVoucherDateSchema,
+} from "../dunning/dunningSchemas.js"
 import { cliOptionCreate } from "./cliOptionCreate.js"
 import { cliOptionSchemas } from "./cliOptionSchemas.js"
 import type { DunningCreateInputFlags } from "./dunningCreateInput.js"
 
-const dunningLineItemTypeSchema = a.picklist(["custom", "material", "service", "text"])
-
 export const dunningCreateOptions = {
-  precedingSalesVoucherId: cliOptionCreate(cliOptionSchemas.id, "Preceding sales voucher ID"),
-  finalize: cliOptionCreate(cliOptionSchemas.boolean, "Finalize dunning", { optional: true }),
-  title: cliOptionCreate(cliOptionSchemas.string, "Dunning title", { optional: true }),
-  voucherDate: cliOptionCreate(cliOptionSchemas.dateTime, "Voucher date", { optional: true }),
-  extraLineItemType: cliOptionCreate(dunningLineItemTypeSchema, "Extra line-item type", {
+  precedingSalesVoucherId: cliOptionCreate(dunningPrecedingSalesVoucherIdSchema, "Preceding sales voucher ID"),
+  finalize: cliOptionCreate(a.pipe(cliOptionSchemas.boolean, dunningFinalizeSchema), "Finalize dunning", {
+    optional: true,
+  }),
+  title: cliOptionCreate(dunningTitleSchema, "Dunning title", { optional: true }),
+  voucherDate: cliOptionCreate(a.pipe(cliOptionSchemas.dateTime, dunningVoucherDateSchema), "Voucher date", {
+    optional: true,
+  }),
+  extraLineItemType: cliOptionCreate(dunningExtraLineItemTypeSchema, "Extra line-item type", {
     optional: true,
     variadic: true,
   }),
-  extraLineItemName: cliOptionCreate(cliOptionSchemas.string, "Extra line-item name", {
+  extraLineItemName: cliOptionCreate(dunningExtraLineItemNameSchema, "Extra line-item name", {
     optional: true,
     variadic: true,
   }),
-  extraLineItemDescription: cliOptionCreate(cliOptionSchemas.string, "Extra line-item description", {
+  extraLineItemDescription: cliOptionCreate(dunningExtraLineItemDescriptionSchema, "Extra line-item description", {
     optional: true,
     variadic: true,
   }),
-  extraLineItemQuantity: cliOptionCreate(cliOptionSchemas.number, "Extra line-item quantity", {
+  extraLineItemQuantity: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, dunningExtraLineItemQuantitySchema),
+    "Extra line-item quantity",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  extraLineItemUnitName: cliOptionCreate(dunningExtraLineItemUnitNameSchema, "Extra line-item unit name", {
     optional: true,
     variadic: true,
   }),
-  extraLineItemUnitName: cliOptionCreate(cliOptionSchemas.string, "Extra line-item unit name", {
-    optional: true,
-    variadic: true,
-  }),
-  extraLineItemUnitPriceCurrency: cliOptionCreate(a.literal("EUR"), "Extra line-item unit-price currency", {
-    optional: true,
-    variadic: true,
-  }),
-  extraLineItemUnitPriceNetAmount: cliOptionCreate(cliOptionSchemas.number, "Extra line-item unit-price net amount", {
-    optional: true,
-    variadic: true,
-  }),
+  extraLineItemUnitPriceCurrency: cliOptionCreate(
+    dunningExtraLineItemUnitPriceCurrencySchema,
+    "Extra line-item unit-price currency",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  extraLineItemUnitPriceNetAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, dunningExtraLineItemUnitPriceNetAmountSchema),
+    "Extra line-item unit-price net amount",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
   extraLineItemUnitPriceGrossAmount: cliOptionCreate(
-    cliOptionSchemas.number,
+    a.pipe(cliOptionSchemas.number, dunningExtraLineItemUnitPriceGrossAmountSchema),
     "Extra line-item unit-price gross amount",
-    { optional: true, variadic: true },
+    {
+      optional: true,
+      variadic: true,
+    },
   ),
   extraLineItemUnitPriceTaxRatePercentage: cliOptionCreate(
-    cliOptionSchemas.number,
+    a.pipe(cliOptionSchemas.number, dunningExtraLineItemUnitPriceTaxRatePercentageSchema),
     "Extra line-item unit-price tax rate",
-    { optional: true, variadic: true },
+    {
+      optional: true,
+      variadic: true,
+    },
   ),
-  extraLineItemDiscountPercentage: cliOptionCreate(cliOptionSchemas.number, "Extra line-item discount percentage", {
+  extraLineItemDiscountPercentage: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, dunningExtraLineItemDiscountPercentageSchema),
+    "Extra line-item discount percentage",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  extraLineItemAmount: cliOptionCreate(
+    a.pipe(cliOptionSchemas.number, dunningExtraLineItemAmountSchema),
+    "Extra line-item amount",
+    {
+      optional: true,
+      variadic: true,
+    },
+  ),
+  totalNetAmount: cliOptionCreate(a.pipe(cliOptionSchemas.number, dunningTotalNetAmountSchema), "Total net amount", {
     optional: true,
-    variadic: true,
   }),
-  extraLineItemAmount: cliOptionCreate(cliOptionSchemas.number, "Extra line-item amount", {
-    optional: true,
-    variadic: true,
-  }),
-  totalNetAmount: cliOptionCreate(cliOptionSchemas.number, "Total net amount", { optional: true }),
-  currency: cliOptionCreate(cliOptionSchemas.string, "Currency", { optional: true }),
+  currency: cliOptionCreate(dunningCurrencySchema, "Currency", { optional: true }),
 } satisfies FlagParametersForType<DunningCreateInputFlags>

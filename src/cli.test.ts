@@ -1,7 +1,7 @@
+import { expect, test } from "bun:test"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { expect, test } from "bun:test"
 
 type CliExecution = {
   readonly exitCode: number
@@ -78,6 +78,11 @@ test("CLI delegates representative read and write routes to the API", async () =
       return jsonResponse({ id: "article-2" })
     }
 
+    if (request.method === "PUT" && url.pathname === "/v1/articles/article-3") {
+      captured.body = JSON.parse(await request.text()) as unknown
+      return jsonResponse({ id: "article-3" })
+    }
+
     return jsonResponse({ success: false, op: "mockApi", errorMessage: "Unexpected request" }, { status: 500 })
   })
 
@@ -115,7 +120,29 @@ test("CLI delegates representative read and write routes to the API", async () =
     expect(create.stderr).toBe("")
     expect(cliResultParse(create.stdout)).toEqual({ success: true, data: { id: "article-2" } })
 
-    expect(api.requests).toHaveLength(2)
+    const update = await cliExecutableRun([
+      "article",
+      "update",
+      "--base-url",
+      api.baseUrl,
+      "--access-token",
+      "option-token",
+      "--id",
+      "article-3",
+      "--type",
+      "SERVICE",
+      "--title",
+      "Consulting",
+      "--leading-price",
+      "GROSS",
+      "--gross-price",
+      "12.5",
+    ])
+    expect(update.exitCode).toBe(0)
+    expect(update.stderr).toBe("")
+    expect(cliResultParse(update.stdout)).toEqual({ success: true, data: { id: "article-3" } })
+
+    expect(api.requests).toHaveLength(3)
     expect(api.requests[0]).toMatchObject({
       authorization: "Bearer environment-token",
       method: "GET",
@@ -131,6 +158,16 @@ test("CLI delegates representative read and write routes to the API", async () =
         type: "PRODUCT",
         price: { leadingPrice: "NET", netPrice: 10, taxRate: 19 },
         version: 0,
+      },
+    })
+    expect(api.requests[2]).toMatchObject({
+      authorization: "Bearer option-token",
+      method: "PUT",
+      path: "/v1/articles/article-3",
+      body: {
+        title: "Consulting",
+        type: "SERVICE",
+        price: { leadingPrice: "GROSS", grossPrice: 12.5 },
       },
     })
   } finally {
@@ -197,6 +234,41 @@ test("CLI uses environment token fallbacks and rejects missing authentication", 
     expect(missing.stdout).toBe("")
     expect(cliResultParse(missing.stderr)).toMatchObject({ success: false, op: "cliAccessTokenResolve" })
     expect(api.requests).toHaveLength(1)
+  } finally {
+    api.stop()
+  }
+})
+
+test("CLI executes print-layout list command and outputs JSON", async () => {
+  const api = mockApiStart(async (request, url) => {
+    if (request.method === "GET" && url.pathname === "/v1/print-layouts") {
+      return jsonResponse([{ id: "layout-1", name: "Default" }])
+    }
+
+    return jsonResponse({ success: false, op: "mockApi", errorMessage: "Unexpected request" }, { status: 500 })
+  })
+
+  try {
+    const list = await cliExecutableRun([
+      "print-layout",
+      "list",
+      "--base-url",
+      api.baseUrl,
+      "--access-token",
+      "test-token",
+    ])
+    expect(list.exitCode).toBe(0)
+    expect(list.stderr).toBe("")
+    expect(cliResultParse(list.stdout)).toEqual({
+      success: true,
+      data: [{ id: "layout-1", name: "Default" }],
+    })
+    expect(api.requests).toHaveLength(1)
+    expect(api.requests[0]).toMatchObject({
+      authorization: "Bearer test-token",
+      method: "GET",
+      path: "/v1/print-layouts",
+    })
   } finally {
     api.stop()
   }
