@@ -1,0 +1,92 @@
+import { expect, test } from "bun:test"
+import type { CommandContext } from "@stricli/core"
+import * as a from "valibot"
+import { invoiceOptions } from "../cli/invoiceCreateOptions.js"
+import {
+  invoiceCreateInputSchema,
+  invoiceLineItemSchema,
+  invoiceListInputSchema,
+  invoiceShippingConditionsSchema,
+  invoiceUpdateBodySchema,
+  invoiceUpdateInputSchema,
+} from "./invoiceSchemas.js"
+
+const validInvoice = {
+  voucherDate: "2026-08-16T00:00",
+  address: { name: "Example customer", countryCode: "DE" },
+  lineItems: [
+    {
+      type: "custom",
+      name: "Consulting",
+      quantity: 1,
+      unitName: "Hours",
+      unitPrice: { currency: "EUR", netAmount: 100, taxRatePercentage: 19 },
+    },
+  ],
+  totalPrice: { currency: "EUR", totalNetAmount: 100 },
+  taxConditions: { taxType: "net" },
+  shippingConditions: { shippingType: "none" },
+} as const
+
+test("invoice line items enforce type-specific fields", () => {
+  expect(
+    a.safeParse(invoiceLineItemSchema, {
+      type: "material",
+      name: "Material",
+    }).success,
+  ).toBe(false)
+  expect(
+    a.safeParse(invoiceLineItemSchema, {
+      ...validInvoice.lineItems[0],
+      type: "text",
+    }).success,
+  ).toBe(true)
+})
+
+test("invoice shipping conditions enforce required and ordered dates", () => {
+  expect(a.safeParse(invoiceShippingConditionsSchema, { shippingType: "service" }).success).toBe(false)
+  expect(
+    a.safeParse(invoiceShippingConditionsSchema, {
+      shippingType: "serviceperiod",
+      shippingDate: "2026-08-17T00:00",
+      shippingEndDate: "2026-08-16T00:00",
+    }).success,
+  ).toBe(false)
+})
+
+test("invoice create and update schemas enforce tax conditions", () => {
+  expect(a.safeParse(invoiceCreateInputSchema, { invoice: validInvoice }).success).toBe(true)
+  expect(
+    a.safeParse(invoiceCreateInputSchema, {
+      invoice: {
+        ...validInvoice,
+        taxConditions: { taxType: "gross" },
+      },
+    }).success,
+  ).toBe(false)
+  expect(a.safeParse(invoiceUpdateInputSchema, { id: "invoice-1", invoice: validInvoice }).success).toBe(true)
+})
+
+test("invoice update schema keeps partial update fields optional", () => {
+  const partialInvoice = {
+    title: "Updated title",
+    lineItems: [{ name: "item" }],
+  }
+
+  expect(a.safeParse(invoiceUpdateBodySchema, partialInvoice).success).toBe(true)
+  expect(a.safeParse(invoiceUpdateInputSchema, { id: "invoice-1", invoice: partialInvoice }).success).toBe(true)
+  expect(a.safeParse(invoiceUpdateInputSchema, { id: "invoice-1", invoice: { title: "Updated title" } }).success).toBe(
+    false,
+  )
+})
+
+test("invoice list schema remains a small named query schema", () => {
+  expect(a.safeParse(invoiceListInputSchema, { page: 2, status: "open" }).success).toBe(true)
+})
+
+test("invoice CLI options coerce through domain leaf schemas", () => {
+  const context = {} as CommandContext
+  expect(invoiceOptions.lineItemQuantity.parse.call(context, "2")).toBe(2)
+  expect(() => invoiceOptions.lineItemQuantity.parse.call(context, "-1")).toThrow()
+  expect(() => invoiceOptions.shippingConditionsShippingType.parse.call(context, "invalid")).toThrow()
+})

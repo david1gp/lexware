@@ -2,6 +2,13 @@ import * as a from "valibot"
 
 export const articleTypeSchema = a.picklist(["PRODUCT", "SERVICE"])
 
+export const articlePriceSchema = a.looseObject({
+  netPrice: a.optional(a.number()),
+  grossPrice: a.optional(a.number()),
+  leadingPrice: a.picklist(["NET", "GROSS"]),
+  taxRate: a.optional(a.number()),
+})
+
 export const articleBodySchema = a.looseObject({
   title: a.optional(a.string()),
   description: a.optional(a.string()),
@@ -11,14 +18,7 @@ export const articleBodySchema = a.looseObject({
   note: a.optional(a.string()),
   unitName: a.optional(a.string()),
   version: a.optional(a.number()),
-  price: a.optional(
-    a.looseObject({
-      netPrice: a.optional(a.number()),
-      grossPrice: a.optional(a.number()),
-      leadingPrice: a.picklist(["NET", "GROSS"]),
-      taxRate: a.optional(a.number()),
-    }),
-  ),
+  price: a.optional(articlePriceSchema),
 })
 
 export const articleListInputSchema = a.object({

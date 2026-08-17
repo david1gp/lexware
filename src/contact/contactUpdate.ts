@@ -3,11 +3,8 @@ import { createResultError, type PromiseResult } from "#result"
 import type { LexwareClient } from "../shared/LexwareClient.js"
 import { lexwareErrorData } from "../shared/lexwareErrorData.js"
 import { lexwareRequest } from "../shared/lexwareRequest.js"
-import {
-  type LexwareUnknownResponse,
-  lexwareLooseBodySchema,
-  lexwareUnknownResponseSchema,
-} from "../shared/lexwareSchemas.js"
+import { type LexwareUnknownResponse, lexwareUnknownResponseSchema } from "../shared/lexwareSchemas.js"
+import { contactUpdateBodySchema } from "./contactSchemas.js"
 
 export async function contactUpdate(
   client: LexwareClient,
@@ -15,7 +12,7 @@ export async function contactUpdate(
   input: unknown,
 ): PromiseResult<LexwareUnknownResponse> {
   const op = "contactUpdate"
-  const r = a.safeParse(lexwareLooseBodySchema, input)
+  const r = a.safeParse(contactUpdateBodySchema, input)
   if (!r.success) return createResultError(op, a.summarize(r.issues), lexwareErrorData(input))
   return lexwareRequest(client, {
     op,

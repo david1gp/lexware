@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test"
-import { lexwareTestClient } from "../shared/lexwareTestClient.test.js"
+import { lexwareRequestBodyJson, lexwareTestClient } from "../shared/lexwareTestClient.test.js"
 import { quotationCreate } from "./quotationCreate.js"
 import { quotationDelete } from "./quotationDelete.js"
 import { quotationList } from "./quotationList.js"
+import { quotationUpdate } from "./quotationUpdate.js"
 
 test("quotationList builds page query", async () => {
   const { client, calls } = lexwareTestClient()
@@ -23,4 +24,14 @@ test("quotationCreate rejects invalid line items", async () => {
     lineItems: [{ type: "wrong" }],
   } as never)
   expect(result.success).toBe(false)
+})
+
+test("quotationUpdate preserves partial update bodies", async () => {
+  const { client, calls } = lexwareTestClient()
+  const result = await quotationUpdate(client, "q1", { title: "Updated quotation" })
+
+  expect(result.success).toBe(true)
+  expect(String(calls[0]?.input)).toBe("https://api.lexware.io/v1/quotations/q1")
+  expect(calls[0]?.init?.method).toBe("PUT")
+  expect(await lexwareRequestBodyJson(calls[0]!)).toEqual({ title: "Updated quotation" })
 })
