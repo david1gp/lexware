@@ -1,9 +1,9 @@
-# @adaptive-ds/lexware
+# @adaptive-ds/lexware-client
 
 Result-based TypeScript API clients for Lexware Office.
 
 ```ts
-import { articleList, lexwareClientCreate } from "@adaptive-ds/lexware"
+import { articleList, lexwareClientCreate } from "@adaptive-ds/lexware-client"
 
 const client = lexwareClientCreate({ accessToken: process.env.LEXWARE_TOKEN ?? "" })
 if (!client.success) throw new Error(client.errorMessage)
@@ -21,7 +21,7 @@ Fallible functions return `Result<T>` or `PromiseResult<T>` from `#result`. Runt
 Install the package and run the `lexware` executable:
 
 ```bash
-bun add --global @adaptive-ds/lexware
+bun add --global @adaptive-ds/lexware-client
 lexware --help
 ```
 

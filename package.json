@@ -1,5 +1,5 @@
 {
-  "name": "@adaptive-ds/lexware",
+  "name": "@adaptive-ds/lexware-client",
   "version": "0.1.1",
   "scripts": {
     "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json && chmod +x ./dist/cli.js",
@@ -44,13 +44,13 @@
     "typescript",
     "result"
   ],
-  "homepage": "https://github.com/david1gp/lexware",
+  "homepage": "https://github.com/david1gp/lexware-client",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/david1gp/lexware.git"
+    "url": "git+https://github.com/david1gp/lexware-client.git"
   },
   "bugs": {
-    "url": "https://github.com/david1gp/lexware/issues"
+    "url": "https://github.com/david1gp/lexware-client/issues"
   },
   "types": "./dist/index.d.ts",
   "exports": {
