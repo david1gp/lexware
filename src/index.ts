@@ -1,4 +1,5 @@
 export { articleCreate } from "./article/api/articleCreate.js"
+export { packageVersion } from "./packageVersion.js"
 export { articleDelete } from "./article/api/articleDelete.js"
 export { articleGet } from "./article/api/articleGet.js"
 export { articleList } from "./article/api/articleList.js"

@@ -15,6 +15,7 @@ import { dunningCommand } from "./dunning/cli/dunningCommand.js"
 import { fileCommand } from "./file/cli/fileCommand.js"
 import { invoiceCommand } from "./invoice/cli/invoiceCommand.js"
 import { orderConfirmationCommand } from "./orderConfirmation/cli/orderConfirmationCommand.js"
+import { packageVersion } from "./packageVersion.js"
 import { printLayoutCommand } from "./printLayout/cli/printLayoutCommand.js"
 import { quotationCommand } from "./quotation/cli/quotationCommand.js"
 import { voucherCommand } from "./voucher/cli/voucherCommand.js"
@@ -87,6 +88,9 @@ export const lexwareCommand = buildApplication(lexwareRouteMap, {
   },
   localization: {
     text: cliApplicationText,
+  },
+  versionInfo: {
+    currentVersion: packageVersion,
   },
 })
 
